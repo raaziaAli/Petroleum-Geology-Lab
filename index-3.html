@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Eight narrated, interactive petroleum geology simulations for students.">
+<title>Petroleum Geology Sim Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a well-log style depth track of topics on the left; each topic opens a simulation canvas beside an instrument panel, with a narration bar above */
+:root{
+  --bg:#E6EAE7; --surface:#F7F9F7; --ink:#16201D; --muted:#55635E; --line:#C4CDC8;
+  --accent:#B06A07; --water:#26718A; --gas:#C0423C; --sand:#D5B163; --shale:#77838A; --carb:#9DB1C6; --salt:#E2DAEE;
+  --good:#2D7A4C; --warn:#9E6E00; --bad:#B0372F;
+  --f-display:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;
+  --f-body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1513; --surface:#17201D; --ink:#E3EAE6; --muted:#93A29C; --line:#2C3835;
+  --accent:#E8A13A; --water:#4CA2B8; --gas:#E26B64; --sand:#B39150; --shale:#5A666C; --carb:#6B8198; --salt:#463F55;
+  --good:#5CBA80; --warn:#DDAE3F; --bad:#E26B64; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1513; --surface:#17201D; --ink:#E3EAE6; --muted:#93A29C; --line:#2C3835;
+  --accent:#E8A13A; --water:#4CA2B8; --gas:#E26B64; --sand:#B39150; --shale:#5A666C; --carb:#6B8198; --salt:#463F55;
+  --good:#5CBA80; --warn:#DDAE3F; --bad:#E26B64; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1280px;margin:0 auto;display:grid;gap:18px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 24px;border-bottom:2px solid var(--ink);padding-bottom:10px}
+.brand{font-family:var(--f-display);font-weight:800;font-size:clamp(30px,5vw,46px);line-height:.95;letter-spacing:.01em;text-transform:uppercase;text-wrap:balance;margin:0}
+.brand span{color:var(--accent)}
+.tag{font-family:var(--f-mono);font-size:12px;color:var(--muted);max-width:52ch;margin:0}
+.shell{display:grid;grid-template-columns:230px minmax(0,1fr);gap:22px;align-items:start}
+nav.track{position:sticky;top:12px;display:grid;gap:0;border-left:2px solid var(--ink)}
+.trk{all:unset;cursor:pointer;display:grid;grid-template-columns:34px 10px minmax(0,1fr);gap:10px;align-items:center;padding:9px 10px 9px 0;border-bottom:1px solid var(--line)}
+.trk .dep{font-family:var(--f-mono);font-size:11px;color:var(--muted);text-align:right}
+.trk .sw{width:10px;height:30px;border:1px solid var(--line)}
+.trk .nm{font-size:13.5px;line-height:1.25;min-width:0}
+.trk .nm small{display:block;font-family:var(--f-mono);font-size:10.5px;color:var(--muted);letter-spacing:.02em}
+.trk:hover .nm{color:var(--accent)}
+.trk[aria-current="true"]{background:var(--surface)}
+.trk[aria-current="true"] .dep{color:var(--accent);font-weight:500}
+.trk[aria-current="true"] .nm{font-weight:600}
+.trk:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+main{display:grid;gap:14px;min-width:0}
+.modhead{display:grid;gap:4px}
+.eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(28px,4vw,40px);line-height:1;margin:0;letter-spacing:.01em;text-wrap:balance}
+.goal{margin:0;color:var(--muted);max-width:68ch}
+.voice{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;background:var(--surface);border:1px solid var(--line);padding:10px 12px}
+.btn{font:500 13px var(--f-body);color:var(--ink);background:transparent;border:1px solid var(--ink);padding:7px 12px;cursor:pointer;border-radius:2px}
+.btn:hover{background:var(--bg)}
+.btn.primary{background:var(--ink);color:var(--surface)}
+.btn.primary:hover{background:var(--accent);border-color:var(--accent)}
+.btn:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.voice label{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.voice select{font:13px var(--f-body);background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:4px}
+.hint{flex-basis:100%;margin:0;font-size:12px;color:var(--muted)}
+.vname{font-size:12.5px;color:var(--muted)} .vname strong{color:var(--ink);font-weight:500}
+.cap{flex-basis:100%;margin:2px 0 0;font-size:14.5px;min-height:2.6em;color:var(--ink);border-top:1px dashed var(--line);padding-top:8px}
+.cap b{font-family:var(--f-mono);font-weight:500;font-size:11px;color:var(--accent);margin-right:8px}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items:start}
+.canvas-wrap{background:var(--surface);border:1px solid var(--line);padding:12px;min-width:0}
+canvas{display:block;width:100%}
+.panel{display:grid;gap:14px;min-width:0}
+.box{background:var(--surface);border:1px solid var(--line);padding:12px 14px;display:grid;gap:12px}
+.box h2{font:600 11.5px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
+.ctl{display:grid;gap:4px}
+.ctl .row{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.ctl output{font-family:var(--f-mono);font-size:12.5px;color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ctl input[type=range]{width:100%;accent-color:var(--accent)}
+.ctl select{font:13.5px var(--f-body);padding:6px;background:var(--bg);color:var(--ink);border:1px solid var(--line);width:100%}
+dl.read{margin:0;display:grid;grid-template-columns:auto auto;gap:6px 10px;font-size:13px}
+dl.read dt{color:var(--muted)}
+dl.read dd{margin:0;text-align:right;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+.chip{display:inline-block;font-family:var(--f-mono);font-size:11px;padding:1px 7px;border:1px solid currentColor;border-radius:999px}
+.good{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+.learn{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.learn ol{margin:0;padding-left:20px;display:grid;gap:6px;font-size:14px}
+.quiz p{margin:0;font-size:14.5px;font-weight:500}
+.opts{display:grid;gap:6px}
+.opt{all:unset;cursor:pointer;border:1px solid var(--line);padding:7px 10px;font-size:13.5px;background:var(--bg)}
+.opt:hover{border-color:var(--ink)}
+.opt:focus-visible{outline:2px solid var(--accent)}
+.opt.right{border-color:var(--good);color:var(--good)}
+.opt.wrong{border-color:var(--bad);color:var(--bad)}
+.why{font-size:13.5px;color:var(--muted);margin:0}
+.foot{font-size:12.5px;color:var(--muted);margin:0;max-width:80ch}
+@media (max-width:1020px){.stage{grid-template-columns:minmax(0,1fr)} .panel{grid-template-columns:1fr 1fr}}
+@media (max-width:860px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  nav.track{position:static;border-left:0;border-top:2px solid var(--ink);display:flex;overflow-x:auto;gap:0}
+  .trk{grid-template-columns:auto 8px auto;padding:8px 12px 8px 4px;border-bottom:0;border-right:1px solid var(--line);flex:0 0 auto}
+  .trk .sw{height:24px;width:8px}
+  .trk .nm{white-space:nowrap}
+  .trk .nm small{display:none}
+  .learn{grid-template-columns:1fr}
+}
+@media (max-width:620px){.panel{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <p class="brand">Petroleum Geology <span>Sim Lab</span></p>
+    <p class="tag">Eight narrated simulations, from the properties of crude oil to shale wells. Pick a topic, move the controls, and press Play lesson.</p>
+  </header>
+  <div class="shell">
+    <nav class="track" id="nav" aria-label="Topics"></nav>
+    <main>
+      <div class="modhead">
+        <p class="eyebrow" id="eyebrow"></p>
+        <h1 id="title"></h1>
+        <p class="goal" id="goal"></p>
+      </div>
+      <div class="voice" role="region" aria-label="Narration">
+        <button class="btn primary" id="vPlay" type="button">▶ Play lesson</button>
+        <button class="btn" id="vDesc" type="button">Describe what I see</button>
+        <button class="btn" id="vStop" type="button">Stop</button>
+        <label for="vRate">Speed
+          <select id="vRate"><option value="0.85">0.85×</option><option value="1" selected>1×</option><option value="1.15">1.15×</option><option value="1.3">1.3×</option></select>
+        </label>
+        <span class="vname">Voice: <strong id="vVoice">Karen</strong></span>
+        <label for="vExpr">Expression
+          <select id="vExpr"><option value="auto" selected>Auto</option><option value="expressive">Expressive</option><option value="plain">Plain</option></select>
+        </label>
+        <label for="vAuto"><input type="checkbox" id="vAuto"> Narrate my changes</label>
+        <p class="hint">Narration uses the Karen voice, which comes with Mac, iPhone and iPad. On a Mac, Safari or Chrome both work.</p>
+        <p class="cap" id="cap" aria-live="polite"><b>CAPTION</b>Press Play lesson to hear a narrated introduction, or Describe what I see for a reading of the current simulation.</p>
+      </div>
+      <div class="stage">
+        <div class="canvas-wrap" id="cwrap"><canvas id="cv" role="img" aria-label="Simulation"></canvas></div>
+        <div class="panel">
+          <div class="box" id="controls"><h2>Controls</h2></div>
+          <div class="box"><h2>Readouts</h2><dl class="read" id="reads"></dl></div>
+        </div>
+      </div>
+      <div class="learn">
+        <div class="box"><h2>Try this</h2><ol id="tries"></ol></div>
+        <div class="box quiz" id="quiz"><h2>Quick check</h2></div>
+      </div>
+      <p class="foot">Models are simplified for teaching: correlations (Beggs–Robinson viscosity, Kozeny–Carman permeability, Arrhenius kerogen kinetics, Arps decline) are real, but parameters are illustrative. Topic numbers follow the chapter outline you study from.</p>
+    </main>
+  </div>
+</div>
+
+<script>
+const TAU=Math.PI*2;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const RM=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FM="'IBM Plex Mono', ui-monospace, Menlo, monospace", FB="'IBM Plex Sans', system-ui, sans-serif";
+let C={};
+function readTheme(){const cs=getComputedStyle(document.documentElement);['bg','surface','ink','muted','line','accent','water','gas','sand','shale','carb','salt','good','warn','bad'].forEach(k=>C[k]=cs.getPropertyValue('--'+k).trim()||'#888888');}
+function rgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return[n>>16&255,n>>8&255,n&255];}
+function mix(a,b,t){const A=rgb(a),B=rgb(b);return'#'+A.map((v,i)=>Math.round(lerp(v,B[i],t)).toString(16).padStart(2,'0')).join('');}
+function alpha(a,al){const A=rgb(a);return`rgba(${A[0]},${A[1]},${A[2]},${al})`;}
+function T(ctx,s,x,y,o={}){ctx.font=`${o.w||400} ${o.s||11}px ${o.f==='sans'?FB:FM}`;ctx.fillStyle=o.c||C.muted;ctx.textAlign=o.a||'left';ctx.textBaseline=o.b||'alphabetic';ctx.fillText(String(s),x,y);}
+function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
+const n0=v=>Math.round(v).toLocaleString('en-US');
+const n1=v=>(Math.round(v*10)/10).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
+const n2=v=>v.toFixed(2);
+const sp2=v=>(v<0?'minus ':'')+Math.abs(v).toFixed(2);
+function split(W,H,r=0.55,gap=16){if(W<560){const h1=Math.round(H*r);return[{x:0,y:0,w:W,h:h1},{x:0,y:h1+gap,w:W,h:H-h1-gap}];}const w1=Math.round(W*r);return[{x:0,y:0,w:w1,h:H},{x:w1+gap,y:0,w:W-w1-gap,h:H}];}
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+function axes(ctx,r,o){
+  const p=Object.assign({l:44,r:12,t:26,b:34},o.pad||{});
+  const px=r.x+p.l,py=r.y+p.t,pw=r.w-p.l-p.r,ph=r.h-p.t-p.b;
+  const X=v=>px+(v-o.x0)/(o.x1-o.x0)*pw, Y=v=>py+(v-o.y0)/(o.y1-o.y0)*ph;
+  ctx.lineWidth=1;
+  (o.yt||[]).forEach(v=>{const y=Math.round(Y(v))+.5;ctx.strokeStyle=alpha(C.line,.8);ctx.beginPath();ctx.moveTo(px,y);ctx.lineTo(px+pw,y);ctx.stroke();T(ctx,o.yf?o.yf(v):v,px-6,y,{a:'right',b:'middle',s:10});});
+  (o.xt||[]).forEach(v=>{const x=Math.round(X(v))+.5;ctx.strokeStyle=alpha(C.line,.8);ctx.beginPath();ctx.moveTo(x,py);ctx.lineTo(x,py+ph);ctx.stroke();T(ctx,o.xf?o.xf(v):v,x,o.xTop?py-6:py+ph+14,{a:'center',s:10});});
+  ctx.strokeStyle=C.muted;ctx.strokeRect(px+.5,py+.5,pw-1,ph-1);
+  if(o.xl)T(ctx,o.xl,px+pw/2,o.xTop?r.y+10:py+ph+29,{a:'center',c:C.ink,s:11});
+  if(o.yl){ctx.save();ctx.translate(r.x+9,py+ph/2);ctx.rotate(-Math.PI/2);T(ctx,o.yl,0,0,{a:'center',b:'middle',c:C.ink,s:11});ctx.restore();}
+  return{X,Y,px,py,pw,ph};
+}
+function gauge(ctx,x,y,w,o){
+  T(ctx,o.label,x,y,{f:'sans',s:12,w:500,c:C.ink});
+  if(o.vtxt)T(ctx,o.vtxt,x+w,y,{a:'right',s:12,w:500,c:C.accent});
+  const ty=y+9,th=15;
+  const a=o.log?Math.log10(o.min):o.min,b=o.log?Math.log10(o.max):o.max;
+  const pos=v=>{const vv=o.log?Math.log10(clamp(v,o.min,o.max)):clamp(v,o.min,o.max);return x+(vv-a)/(b-a)*w;};
+  ctx.fillStyle=alpha(C.line,.45);ctx.fillRect(x,ty,w,th);
+  (o.bands||[]).forEach(([lo,hi,col,name])=>{const xa=pos(lo),xb=pos(hi);ctx.fillStyle=alpha(col,.42);ctx.fillRect(xa,ty,xb-xa,th);
+    if(name){ctx.font=`400 9.5px ${FM}`;if(ctx.measureText(name).width<xb-xa-4)T(ctx,name,(xa+xb)/2,ty+th/2+.5,{a:'center',b:'middle',s:9.5,c:C.ink});}});
+  ctx.strokeStyle=C.line;ctx.strokeRect(x+.5,ty+.5,w-1,th-1);
+  (o.ticks||[]).forEach(v=>{const tx=pos(v);ctx.fillStyle=C.muted;ctx.fillRect(tx,ty+th,1,4);const al=tx>x+w-36?'right':tx<x+24?'left':'center';T(ctx,o.tf?o.tf(v):v,tx,ty+th+14,{a:al,s:9.5});});
+  const mx=pos(o.value);ctx.fillStyle=C.ink;ctx.fillRect(mx-1,ty-3,2,th+6);ctx.beginPath();ctx.moveTo(mx-5,ty-7);ctx.lineTo(mx+5,ty-7);ctx.lineTo(mx,ty-1);ctx.fill();
+  return ty+th+(o.ticks&&o.ticks.length?30:16);
+}
+
+/* ========== 1. CRUDE OIL ========== */
+function visc(api,tc){const TF=tc*9/5+32;const y=Math.pow(10,3.0324-0.02023*api);const x=y*Math.pow(TF,-1.163);return Math.max(0.4,Math.pow(10,x)-1);}
+function oilProps(S){const api=141.5/S.sg-131.5;const mu=visc(api,S.temp);
+  const cls=api<10?'Extra-heavy':api<22.3?'Heavy':api<31.1?'Medium':api<45?'Light':'Very light';
+  const asph=clamp((30-api)*1.1,0.5,35),res=clamp(5+(35-api)*0.5,3,25),aro=30,sat=100-asph-res-aro;
+  return{api,mu,cls,sat,aro,res,asph,sour:S.sulfur>0.5};}
+const fmtVisc=m=>m<10?m.toFixed(1):m<1e6?n0(m):'>1,000,000';
+const oilShade=api=>mix('#E8B84E','#1B120A',clamp((50-api)/52,0,1));
+
+const M_OIL={id:'oil',num:'1',short:'Crude oil properties',topic:'Introduction · physical and chemical properties',title:'Crude Oil Assay Bench',
+ goal:'Change a crude oil’s density, temperature and sulfur, and watch its API gravity, class, composition and viscosity respond.',sw:'#C98A2B',aspect:[0.62,1.35],
+ controls:[
+  {id:'sg',label:'Specific gravity (60 °F)',min:0.72,max:1.06,step:0.005,val:0.86,f:v=>v.toFixed(3)},
+  {id:'temp',label:'Temperature',min:15,max:220,step:1,val:25,f:v=>v+' °C'},
+  {id:'sulfur',label:'Sulfur content',min:0,max:6,step:0.1,val:1.2,f:v=>v.toFixed(1)+' wt %'}],
+ readouts(S){const d=oilProps(S);return[['API gravity',n1(d.api)+'°'],['Class',d.cls],['Viscosity',fmtVisc(d.mu)+' cP'],['In water',S.sg<0.997?'floats':S.sg>1.003?'sinks':'suspends'],['Sulfur',d.sour?'<span class="chip warn">sour</span>':'<span class="chip good">sweet</span>']];},
+ draw(ctx,W,H,S,t){
+  const d=oilProps(S),[A,B]=split(W,H,0.48);const oc=oilShade(d.api);
+  const cw=Math.min(110,A.w*0.3),cx=A.x+Math.max(cw/2+14,A.w*0.3),top=A.y+66,bot=A.y+A.h-22;
+  const lq=top+(bot-top)*0.08,oh=(bot-top)*0.24;
+  T(ctx,'Drip speed tracks viscosity',A.x,A.y+12,{f:'sans',s:11.5});
+  ctx.fillStyle=C.shale;ctx.fillRect(cx-6,top-54,12,28);ctx.beginPath();ctx.moveTo(cx-6,top-26);ctx.lineTo(cx,top-16);ctx.lineTo(cx+6,top-26);ctx.fill();
+  const spd=210/(1+Math.log10(d.mu+1)*1.5),span=lq-(top-14),dy=RM?span*0.4:(t*spd)%span;
+  ctx.fillStyle=oc;ctx.beginPath();ctx.arc(cx,top-14+dy,5,0,TAU);ctx.fill();ctx.strokeStyle=alpha(C.ink,.4);ctx.stroke();
+  let o0,o1;if(S.sg<0.997){o0=lq;o1=lq+oh;}else if(S.sg>1.003){o0=bot-oh;o1=bot;}else{o0=(lq+bot)/2-oh/2;o1=o0+oh;}
+  ctx.save();rr(ctx,cx-cw/2,top,cw,bot-top,8);ctx.clip();
+  ctx.fillStyle=alpha(C.water,.3);ctx.fillRect(cx-cw/2,lq,cw,bot-lq);ctx.fillStyle=oc;ctx.fillRect(cx-cw/2,o0,cw,o1-o0);ctx.restore();
+  ctx.strokeStyle=C.ink;ctx.lineWidth=1.5;rr(ctx,cx-cw/2,top,cw,bot-top,8);ctx.stroke();ctx.lineWidth=1;
+  T(ctx,'crude',cx,(o0+o1)/2,{a:'center',b:'middle',c:d.api<32?'#F3E6CF':'#2A1B0C',s:11,w:500});
+  const wy=S.sg<0.997?(o1+bot)/2:(lq+o0)/2;T(ctx,'water',cx,wy,{a:'center',b:'middle',c:C.water,s:11,w:500});
+  const rx=cx+cw/2+30,yA=v=>lerp(bot,top,(clamp(v,-5,70)+5)/75);
+  [[-5,10],[10,22.3],[22.3,31.1],[31.1,45],[45,70]].forEach(([a,b])=>{ctx.fillStyle=oilShade((a+b)/2);ctx.fillRect(rx,yA(b),9,yA(a)-yA(b));});
+  ctx.strokeStyle=C.line;ctx.strokeRect(rx+.5,top+.5,9,bot-top-1);
+  for(let v=0;v<=70;v+=10){const y=yA(v);ctx.fillStyle=C.muted;ctx.fillRect(rx+9,y,5,1);T(ctx,v,rx+17,y,{b:'middle',s:10});}
+  T(ctx,'°API',rx-2,top-10,{s:10.5,c:C.ink});
+  const my=yA(d.api);ctx.fillStyle=C.accent;ctx.beginPath();ctx.moveTo(rx-2,my);ctx.lineTo(rx-12,my-6);ctx.lineTo(rx-12,my+6);ctx.fill();
+  T(ctx,n1(d.api)+'°',rx+40,my-6,{b:'middle',s:12,w:500,c:C.accent});T(ctx,d.cls,rx+40,my+8,{b:'middle',s:10.5,c:C.ink});
+  if(Math.abs(d.api-10)>5)T(ctx,'= water',rx+40,yA(10),{b:'middle',s:9.5});
+  let y=B.y+14;T(ctx,'Bulk composition (illustrative)',B.x,y,{f:'sans',s:12,w:500,c:C.ink});y+=10;
+  const segs=[['Saturates',d.sat,'#EBC977'],['Aromatics',d.aro,'#C7862A'],['Resins',d.res,'#7B4B1E'],['Asphaltenes',d.asph,'#2B1B0F']];
+  let xx=B.x;segs.forEach(([n,v,c])=>{const w=B.w*v/100;ctx.fillStyle=c;ctx.fillRect(xx,y,w,20);xx+=w;});ctx.strokeStyle=C.line;ctx.strokeRect(B.x+.5,y+.5,B.w-1,19);
+  y+=36;segs.forEach(([n,v,c],i)=>{const lx=B.x+(i%2)*B.w/2,ly=y+(i>>1)*17;ctx.fillStyle=c;ctx.fillRect(lx,ly-9,10,10);ctx.strokeStyle=C.line;ctx.strokeRect(lx+.5,ly-8.5,9,9);T(ctx,`${n} ${Math.round(v)}%`,lx+15,ly,{s:10.5,c:C.ink});});
+  y+=44;
+  y=gauge(ctx,B.x,y,B.w,{label:`Viscosity at ${S.temp} °C`,vtxt:fmtVisc(d.mu)+' cP',value:d.mu,min:1,max:1e6,log:true,ticks:[1,80,1e4,2.5e5],tf:v=>({1:'water',80:'olive oil',10000:'honey',250000:'peanut butter'})[v]});
+  const ch=B.y+B.h-y;
+  if(ch>120){T(ctx,'Heating thins the oil (log scale)',B.x,y+4,{f:'sans',s:12,w:500,c:C.ink});
+    const ax=axes(ctx,{x:B.x,y:y+8,w:B.w,h:ch-8},{x0:15,x1:220,y0:7,y1:-0.5,xt:[50,100,150,200],yt:[0,2,4,6],yf:v=>v===0?'1':'1e'+v,xl:'Temperature (°C)',yl:'cP',pad:{l:38,r:8,t:12,b:34}});
+    ctx.strokeStyle=C.accent;ctx.lineWidth=2;ctx.beginPath();for(let tc=15;tc<=220;tc+=3){const v=Math.log10(Math.min(visc(d.api,tc),1e7));const px=ax.X(tc),py=ax.Y(clamp(v,-0.5,7));tc===15?ctx.moveTo(px,py):ctx.lineTo(px,py);}ctx.stroke();ctx.lineWidth=1;
+    ctx.fillStyle=C.ink;ctx.beginPath();ctx.arc(ax.X(S.temp),ax.Y(clamp(Math.log10(d.mu),-0.5,7)),4.5,0,TAU);ctx.fill();}
+ },
+ intro:'Why does one crude oil pour like water, while another barely moves at all? Welcome to the crude oil assay bench! Petroleum is a natural mixture of hydrocarbons, molecules built mostly from carbon and hydrogen, with small amounts of sulfur, nitrogen, oxygen and trace metals. The first thing anyone asks about a crude is its density. The industry uses API gravity, which runs opposite to density: the lighter the oil, the higher the API number. Fresh water sits at exactly ten degrees API, so any crude below ten is denser than water and sinks. Light oils are rich in small saturated molecules, while heavy oils carry more resins and asphaltenes, the large sticky molecules that make oil thick. Sulfur matters to refiners: below about half a percent the crude is called sweet, above it sour. Temperature matters too. Heating a heavy oil can cut its viscosity by a factor of a thousand, which is why steam is injected into heavy oil fields. Move the sliders and watch the cylinder, the dropper and the viscosity gauge respond.',
+ describe(S){const d=oilProps(S);const cmp=d.mu<5?'close to water':d.mu<300?'similar to a cooking oil':d.mu<30000?'similar to honey':'thicker than honey, closer to tar';
+  return`Right now the oil has a specific gravity of ${S.sg.toFixed(3)}, which works out to ${n1(d.api)} degrees API. That makes it a ${d.cls.toLowerCase()} crude, and it ${S.sg<0.997?'floats on':S.sg>1.003?'sinks below':'hangs suspended in'} the water. At ${S.temp} degrees Celsius its viscosity is about ${d.mu<1e6?n0(d.mu):'more than a million'} centipoise, ${cmp}. With ${S.sulfur.toFixed(1)} percent sulfur, this crude counts as ${d.sour?'sour':'sweet'}.`;},
+ tries:['Set specific gravity to 1.000. What API gravity do you get, and why is that number special?','Choose a heavy crude (SG about 0.98) and heat it from 25 °C to 200 °C. By roughly what factor does viscosity fall?','Find the specific gravity where a crude passes from medium to light (31.1° API).'],
+ quiz:{q:'A crude oil with an API gravity of 8° is poured into fresh water. What happens?',o:['It floats on the water','It sinks below the water','It dissolves completely','It boils off'],a:1,why:'Water is 10° API. Anything below 10° API is denser than water, so it sinks. Extra-heavy oils and bitumen behave this way.'}
+};
+
+/* ========== 2. SEISMIC ========== */
+function seis(S){const v1=2700,r1=2.35,v3=4600,r3=2.62;let v2=S.vs,r2=S.rho;if(S.fluid==='gas'){v2*=0.82;r2-=0.15;}
+ const Z1=v1*r1,Z2=v2*r2,Z3=v3*r3,R1=(Z2-Z1)/(Z2+Z1),R2=(Z3-Z2)/(Z3+Z2),t1=2*S.depth/v1,t2=t1+2*S.thick/v2,tune=v2/(4*30);
+ return{v1,r1,v2,r2,v3,r3,Z1,Z2,Z3,R1,R2,t1,t2,tune};}
+const ricker=(tau,f=30)=>{const a=Math.PI*Math.PI*f*f*tau*tau;return(1-2*a)*Math.exp(-a);};
+const M_SEIS={id:'seis',num:'2',short:'Exploration methods',topic:'Methods of exploration',title:'Seismic Shot Gather',
+ goal:'Fire a seismic source over a sandstone and watch the reflection record. Change rock and fluid properties to make, break or brighten the reflection.',sw:'#7E95AC',aspect:[0.6,1.3],
+ controls:[
+  {id:'vs',label:'Sand P-wave velocity',min:1800,max:5000,step:50,val:2600,f:v=>n0(v)+' m/s'},
+  {id:'rho',label:'Sand bulk density',min:1.9,max:2.7,step:0.01,val:2.2,f:v=>v.toFixed(2)+' g/cc'},
+  {id:'fluid',type:'select',label:'Pore fluid in sand',options:[['brine','Brine'],['gas','Gas']],val:'brine'},
+  {id:'depth',label:'Depth to sand top',min:500,max:2500,step:10,val:1200,f:v=>n0(v)+' m'},
+  {id:'thick',label:'Sand thickness',min:4,max:200,step:1,val:60,f:v=>v+' m'}],
+ readouts(S){const s=seis(S);const bright=S.fluid==='gas'&&s.R1<-0.1;return[['Impedance shale',n0(s.Z1)],['Impedance sand',n0(s.Z2)],['R at sand top',(s.R1>0?'+':'')+s.R1.toFixed(3)],['R at sand base',(s.R2>0?'+':'')+s.R2.toFixed(3)],['TWT to top',s.t1.toFixed(3)+' s'],['Tuning thickness',n0(s.tune)+' m'],['Anomaly',bright?'<span class="chip warn">bright spot</span>':S.thick<s.tune?'<span class="chip">tuned / thin</span>':'<span class="chip good">none</span>']];},
+ draw(ctx,W,H,S,t){
+  const s=seis(S),[A,B]=split(W,H,0.55);const Dmax=Math.max(S.depth+S.thick+700,1700);const y0=A.y+34,yh=A.h-40,Yd=z=>y0+z/Dmax*yh;
+  const tmax=Math.ceil((s.t2+0.3)*10)/10;const tc=RM?tmax*1.2:((t*0.2)%1.25)*tmax;
+  const ytop=Yd(S.depth),ybas=Yd(S.depth+S.thick),sandH=Math.max(2,ybas-ytop);
+  ctx.fillStyle=mix(C.shale,C.surface,.55);ctx.fillRect(A.x,y0,A.w,ytop-y0);
+  ctx.fillStyle=S.fluid==='gas'?mix(C.sand,C.gas,.35):C.sand;ctx.fillRect(A.x,ytop,A.w,sandH);
+  ctx.fillStyle=mix(C.carb,C.surface,.25);ctx.fillRect(A.x,ytop+sandH,A.w,y0+yh-ytop-sandH);
+  ctx.strokeStyle=alpha(C.ink,.12);for(let z=150;z<S.depth;z+=180){const y=Yd(z);ctx.beginPath();ctx.moveTo(A.x,y);ctx.lineTo(A.x+A.w,y);ctx.stroke();}
+  ctx.strokeStyle=C.ink;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(A.x,y0);ctx.lineTo(A.x+A.w,y0);ctx.stroke();ctx.lineWidth=1;
+  T(ctx,`Shale · Vp ${n0(s.v1)} m/s · ρ ${s.r1}`,A.x+6,y0+16,{s:10,c:C.ink});
+  const sl=`Sand (${S.fluid}) · Vp ${n0(s.v2)} · ρ ${s.r2.toFixed(2)}`;
+  if(sandH>15)T(ctx,sl,A.x+6,ytop+sandH/2,{b:'middle',s:10,c:'#2A1B0C'});else T(ctx,sl+' ↓',A.x+6,ytop-6,{s:10,c:C.ink});
+  T(ctx,`Limestone · Vp ${n0(s.v3)} · ρ ${s.r3}`,A.x+6,Math.min(y0+yh-8,ytop+sandH+18),{s:10,c:C.ink});
+  T(ctx,n0(S.depth)+' m',A.x+A.w-4,ytop-4,{a:'right',s:10,c:C.ink});
+  const xs=A.x+A.w*0.12;const rec=[];for(let i=0;i<7;i++)rec.push(A.x+A.w*(0.28+i*0.1));
+  rec.forEach(xr=>{const xm=(xs+xr)/2;ctx.strokeStyle=alpha(C.ink,.18);ctx.beginPath();ctx.moveTo(xs,y0);ctx.lineTo(xm,ytop);ctx.lineTo(xr,y0);ctx.stroke();});
+  if(!RM){const f=tc/s.t1;if(f<0.5){ctx.strokeStyle=alpha(C.accent,.55);ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(xs,y0,f*2*(ytop-y0),0,Math.PI);ctx.stroke();ctx.lineWidth=1;}
+    if(f<=1)rec.forEach(xr=>{const xm=(xs+xr)/2;let px,py;if(f<.5){px=lerp(xs,xm,f*2);py=lerp(y0,ytop,f*2);}else{px=lerp(xm,xr,(f-.5)*2);py=lerp(ytop,y0,(f-.5)*2);}ctx.fillStyle=C.accent;ctx.beginPath();ctx.arc(px,py,3,0,TAU);ctx.fill();});}
+  ctx.fillStyle=C.accent;ctx.beginPath();for(let k=0;k<10;k++){const r=k%2?4:9,a=k*Math.PI/5-Math.PI/2;ctx.lineTo(xs+r*Math.cos(a),y0-11+r*Math.sin(a));}ctx.fill();
+  rec.forEach(xr=>{ctx.fillStyle=C.ink;ctx.beginPath();ctx.moveTo(xr,y0-1);ctx.lineTo(xr-5,y0-10);ctx.lineTo(xr+5,y0-10);ctx.fill();});
+  T(ctx,'source',xs,A.y+12,{a:'center',s:10});T(ctx,'geophones',rec[3],A.y+12,{a:'center',s:10});
+  T(ctx,'Synthetic trace · 30 Hz Ricker',B.x,B.y+12,{f:'sans',s:12,w:500,c:C.ink});
+  const step=tmax>2.2?0.5:0.2,yt=[];for(let i=0;i*step<=tmax+1e-9;i++)yt.push(+(i*step).toFixed(1));
+  const ax=axes(ctx,{x:B.x,y:B.y,w:B.w,h:B.h},{x0:0,x1:1,y0:0,y1:tmax,yt,yf:v=>v.toFixed(1),yl:'Two-way time (s)',pad:{l:40,r:6,t:22,b:10}});
+  const N=Math.max(4,Math.floor(ax.pw/30)),spc=ax.pw/N,k=spc*2.6,tEnd=Math.min(tc,tmax),dt=0.002;
+  const amp=tt=>s.R1*ricker(tt-s.t1)+s.R2*ricker(tt-s.t2);
+  ctx.save();ctx.beginPath();ctx.rect(ax.px,ax.py,ax.pw,ax.ph);ctx.clip();
+  for(let n=0;n<N;n++){const xc=ax.px+spc*(n+.5);
+    ctx.fillStyle=C.ink;ctx.beginPath();ctx.moveTo(xc,ax.Y(0));for(let tt=0;tt<=tEnd;tt+=dt)ctx.lineTo(xc+Math.max(0,amp(tt))*k,ax.Y(tt));ctx.lineTo(xc,ax.Y(tEnd));ctx.fill();
+    ctx.fillStyle=alpha(C.gas,.55);ctx.beginPath();ctx.moveTo(xc,ax.Y(0));for(let tt=0;tt<=tEnd;tt+=dt)ctx.lineTo(xc+Math.min(0,amp(tt))*k,ax.Y(tt));ctx.lineTo(xc,ax.Y(tEnd));ctx.fill();
+    ctx.strokeStyle=C.ink;ctx.beginPath();for(let tt=0;tt<=tEnd;tt+=dt){const px=xc+amp(tt)*k;tt===0?ctx.moveTo(px,ax.Y(tt)):ctx.lineTo(px,ax.Y(tt));}ctx.stroke();}
+  ctx.restore();
+  if(!RM&&tc<tmax){ctx.strokeStyle=C.accent;ctx.beginPath();ctx.moveTo(ax.px,ax.Y(tc));ctx.lineTo(ax.px+ax.pw,ax.Y(tc));ctx.stroke();T(ctx,'recording',ax.px+ax.pw-2,ax.Y(tc)-4,{a:'right',s:9.5,c:C.accent});}
+  if(tEnd>s.t1){T(ctx,`top R ${s.R1>0?'+':''}${s.R1.toFixed(2)}`,ax.px+3,ax.Y(s.t1)-11,{s:10,c:C.ink,w:500});}
+  if(tEnd>s.t2&&ax.Y(s.t2)-ax.Y(s.t1)>22){T(ctx,`base R ${s.R2>0?'+':''}${s.R2.toFixed(2)}`,ax.px+3,ax.Y(s.t2)+18,{s:10,c:C.ink,w:500});}
+ },
+ intro:'How do we see rocks that lie kilometers beneath our feet? We listen to them! This is a seismic reflection survey, the workhorse of petroleum exploration. A source at the surface sends a sound pulse into the ground. Wherever rock properties change, part of that energy bounces back to the geophones. How much bounces back depends on acoustic impedance, which is simply velocity multiplied by density. The reflection coefficient compares the impedance below a boundary with the impedance above it. If the lower layer is harder, the reflection is positive, drawn here as a black filled peak. If it is softer, the reflection is negative, shown in red. Gas in a sandstone slows sound and lowers density, so a gas sand can produce an unusually strong negative reflection called a bright spot. Very thin beds cause the top and base reflections to overlap, an effect called tuning. Watch the trace record, then switch the sand from brine to gas.',
+ describe(S){const s=seis(S);let r=`The sand top sits at ${n0(S.depth)} meters and the echo returns after ${s.t1.toFixed(2)} seconds of two-way time. Its reflection coefficient is ${sp2(s.R1)}, so the top of the sand shows as a ${s.R1<0?'trough, because the sand is softer than the shale above it':'peak, because the sand is harder than the shale above it'}.`;
+  if(S.fluid==='gas'&&s.R1<-0.1)r+=' That strong negative amplitude is a classic gas bright spot.';
+  r+=` The sand is ${S.thick} meters thick and its tuning thickness is about ${n0(s.tune)} meters. ${S.thick<s.tune?'Because it is thinner than that, the top and base reflections overlap and interfere.':'Because it is thicker than that, the top and base reflections appear as separate events.'}`;return r;},
+ tries:['Switch the sand fill from brine to gas. What happens to the size and sign of the top-sand reflection?','Shrink the sand thickness below the tuning thickness and watch the top and base events merge.','With brine fill, raise sand velocity to 4,000 m/s. Is the sand top now a peak or a trough?'],
+ quiz:{q:'Acoustic impedance, which controls reflection strength, is defined as…',o:['velocity × density','velocity ÷ density','density × layer thickness','two-way time × velocity'],a:0,why:'Impedance Z = ρ·V. The reflection coefficient is (Z₂ − Z₁)/(Z₂ + Z₁), so the contrast in impedance across a boundary sets the amplitude and sign.'}
+};
+
+/* ========== 3. SUBSURFACE ========== */
+function ptAt(S,z){const hy=S.rhow*9.81*z,li=23.0*z;const u=clamp((z-S.optop)/0.7,0,1),sm=u*u*(3-2*u);const pp=hy+S.ops*(li-hy)*sm;return{hy,li,pp,T:S.ts+S.grad*z};}
+const M_PT={id:'pt',num:'3',short:'Subsurface environment',topic:'The subsurface environment',title:'Pressure–Temperature Well Probe',
+ goal:'Drop a probe down a well and read temperature and pressure at depth. Add an overpressured zone and see what it means for the oil window and for drilling.',sw:'#8C979C',aspect:[0.6,1.35],
+ controls:[
+  {id:'grad',label:'Geothermal gradient',min:15,max:55,step:1,val:30,f:v=>v+' °C/km'},
+  {id:'ts',label:'Surface temperature',min:0,max:35,step:1,val:20,f:v=>v+' °C'},
+  {id:'rhow',label:'Formation water density',min:1.0,max:1.15,step:0.01,val:1.03,f:v=>v.toFixed(2)+' g/cc'},
+  {id:'optop',label:'Top of overpressure',min:1.0,max:5.5,step:0.1,val:3.0,f:v=>v.toFixed(1)+' km'},
+  {id:'ops',label:'Overpressure severity',min:0,max:0.9,step:0.05,val:0.5,f:v=>Math.round(v*100)+' %'},
+  {id:'probe',label:'Probe depth',min:0.2,max:6,step:0.05,val:4,f:v=>v.toFixed(2)+' km'}],
+ calc(S){const p=ptAt(S,S.probe);const g=p.pp/S.probe;const psift=g*0.044208;const ppg=psift/0.052;const zo=(60-S.ts)/S.grad,zb=(150-S.ts)/S.grad;return{...p,g,psift,ppg,zo,zb};},
+ readouts(S){const c=this.calc(S);const op=c.pp-c.hy;const tone=c.pp>0.9*c.li?'bad':op>2?'warn':'good';
+  return[['Temperature',n0(c.T)+' °C'],['Pore pressure',n1(c.pp)+' MPa'],['Hydrostatic',n1(c.hy)+' MPa'],['Lithostatic',n1(c.li)+' MPa'],['Pressure gradient',c.psift.toFixed(3)+' psi/ft'],['Mud weight needed',n1(c.ppg)+' ppg'],['State',`<span class="chip ${tone}">${tone==='bad'?'near fracture':tone==='warn'?'overpressured':'normal'}</span>`],['Oil window',`${n1(c.zo)}–${n1(c.zb)} km`]];},
+ draw(ctx,W,H,S,t){
+  const [A,B]=split(W,H,0.52);const c=this.calc(S);
+  const ax=axes(ctx,A,{x0:0,x1:150,y0:0,y1:6,xt:[0,30,60,90,120,150],yt:[0,1,2,3,4,5,6],xTop:true,xl:'Pressure (MPa)',yl:'Depth (km)',pad:{l:42,r:10,t:40,b:8}});
+  ctx.fillStyle=alpha(C.gas,.18);ctx.beginPath();for(let z=0;z<=6;z+=0.05)ctx.lineTo(ax.X(ptAt(S,z).hy),ax.Y(z));for(let z=6;z>=0;z-=0.05)ctx.lineTo(ax.X(ptAt(S,z).pp),ax.Y(z));ctx.fill();
+  const line=(fn,col,w,dash)=>{ctx.strokeStyle=col;ctx.lineWidth=w;ctx.setLineDash(dash||[]);ctx.beginPath();for(let z=0;z<=6.001;z+=0.05){const v=fn(ptAt(S,z));z===0?ctx.moveTo(ax.X(v),ax.Y(z)):ctx.lineTo(ax.X(v),ax.Y(z));}ctx.stroke();ctx.setLineDash([]);ctx.lineWidth=1;};
+  line(p=>p.li,C.shale,2,[6,4]);line(p=>p.hy,C.water,2,[3,3]);line(p=>p.pp,C.accent,2.5);
+  const lg=[[C.accent,'Pore pressure'],[C.water,'Hydrostatic'],[C.shale,'Lithostatic'],[alpha(C.gas,.5),'Overpressure']];
+  lg.forEach(([col,n],i)=>{const ly=ax.py+ax.ph-62+i*15;ctx.fillStyle=col;ctx.fillRect(ax.px+8,ly-6,14,4);T(ctx,n,ax.px+27,ly,{s:10,c:C.ink});});
+  const pyp=ax.Y(S.probe);ctx.strokeStyle=C.ink;ctx.setLineDash([2,3]);ctx.beginPath();ctx.moveTo(ax.px,pyp);ctx.lineTo(ax.px+ax.pw,pyp);ctx.stroke();ctx.setLineDash([]);
+  [[c.hy,C.water],[c.li,C.shale],[c.pp,C.accent]].forEach(([v,col])=>{ctx.fillStyle=col;ctx.beginPath();ctx.arc(ax.X(v),pyp,4,0,TAU);ctx.fill();});
+  const bx=ax.X(c.pp)+8;T(ctx,`${n1(c.pp)} MPa`,Math.min(bx,ax.px+ax.pw-60),pyp-6,{s:10.5,w:500,c:C.accent});
+  const tx=axes(ctx,B,{x0:0,x1:300,y0:0,y1:6,xt:[0,100,200,300],yt:[0,1,2,3,4,5,6],xTop:true,xl:'Temperature (°C)',yl:'Depth (km)',pad:{l:42,r:10,t:40,b:8}});
+  const zone=(lo,hi,col,name)=>{const za=clamp((lo-S.ts)/S.grad,0,6),zb=clamp((hi-S.ts)/S.grad,0,6);if(zb<=za)return;ctx.fillStyle=col;ctx.fillRect(tx.px+1,tx.Y(za),tx.pw-2,tx.Y(zb)-tx.Y(za));if(tx.Y(zb)-tx.Y(za)>16)T(ctx,name,tx.px+tx.pw-6,tx.Y(za)+13,{a:'right',s:10,c:C.ink,w:500});};
+  zone(60,150,alpha(C.accent,.2),'Oil window 60–150 °C');zone(150,220,alpha(C.gas,.16),'Gas window 150–220 °C');
+  ctx.strokeStyle=C.gas;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(tx.X(S.ts),tx.Y(0));const zend=Math.min(6,(300-S.ts)/S.grad);ctx.lineTo(tx.X(S.ts+S.grad*zend),tx.Y(zend));ctx.stroke();ctx.lineWidth=1;
+  const pyt=tx.Y(S.probe);ctx.strokeStyle=C.ink;ctx.setLineDash([2,3]);ctx.beginPath();ctx.moveTo(tx.px,pyt);ctx.lineTo(tx.px+tx.pw,pyt);ctx.stroke();ctx.setLineDash([]);
+  if(c.T<=300){ctx.fillStyle=C.ink;ctx.beginPath();ctx.arc(tx.X(c.T),pyt,4.5,0,TAU);ctx.fill();T(ctx,`${n0(c.T)} °C`,Math.min(tx.X(c.T)+8,tx.px+tx.pw-48),pyt-7,{s:10.5,w:500,c:C.ink});}
+  const bit=pyt;ctx.fillStyle=C.ink;ctx.beginPath();ctx.moveTo(tx.px-6,bit);ctx.lineTo(tx.px-1,bit-4);ctx.lineTo(tx.px-1,bit+4);ctx.fill();
+ },
+ intro:'What does a drill bit feel as it goes deeper? Heat, and pressure, and lots of both. Every well drills into a world of rising heat and pressure. Temperature climbs with depth along the geothermal gradient, usually twenty to forty degrees Celsius per kilometer, higher in rifts and young oceanic settings and lower in old cratons. That heat controls when organic matter turns into oil, defining the oil window and, deeper, the gas window. Pressure has three parts to track. Hydrostatic pressure is the weight of a connected column of pore water. Lithostatic pressure is the weight of all the overlying rock and fluid. When fluids cannot escape fast enough, for example in thick, rapidly buried shales, pore pressure rises above hydrostatic. That is overpressure. Drillers must balance it with heavier mud, but if the mud is too heavy it fractures the rock. Slide the probe down the well and read conditions at any depth.',
+ describe(S){const c=this.calc(S);const op=c.pp-c.hy;let r=`At ${S.probe.toFixed(1)} kilometers the rock is about ${n0(c.T)} degrees Celsius. Pore pressure is ${n0(c.pp)} megapascals, compared with ${n0(c.hy)} hydrostatic and ${n0(c.li)} lithostatic.`;
+  r+=op>2?` That is ${n0(op)} megapascals of overpressure, so the driller needs a mud weight of about ${n1(c.ppg)} pounds per gallon.`:' Pressure here is close to normal hydrostatic.';
+  if(c.pp>0.9*c.li)r+=' Pore pressure is approaching the weight of the overburden, so there is a real risk of fracturing the rock or a well kick.';
+  r+=` With a gradient of ${S.grad} degrees per kilometer, the oil window spans roughly ${n1(c.zo)} to ${n1(c.zb)} kilometers.`;return r;},
+ tries:['Raise the geothermal gradient from 30 to 45 °C/km. How much shallower does the oil window become?','Set overpressure top at 2 km and severity at 80 %, then probe 4 km. What mud weight would you need?','Find the probe depth where pore pressure first exceeds 90 % of lithostatic.'],
+ quiz:{q:'Overpressure most commonly develops when…',o:['pore water cannot escape fast enough as low-permeability shale is rapidly buried','the geothermal gradient is unusually low','formation water is fresher than seawater','the reservoir has very high permeability'],a:0,why:'Disequilibrium compaction is the classic cause: rapid burial squeezes shale faster than its pore water can drain, so the fluid carries part of the overburden load.'}
+};
+
+/* ========== 4. GENERATION & MIGRATION ========== */
+const KER={I:{ea:[[50,.1],[52,.8],[54,.1]],hi:750,of:.92,n:'Type I · lacustrine algal'},II:{ea:[[48,.05],[50,.2],[52,.45],[54,.2],[56,.1]],hi:450,of:.82,n:'Type II · marine'},III:{ea:[[48,.1],[50,.15],[52,.2],[54,.2],[56,.15],[58,.1],[60,.1]],hi:150,of:.35,n:'Type III · terrestrial plant'}};
+let genCache={key:'',d:null};
+function genSim(S){const key=[S.ker,S.toc,S.rate,S.grad].join('|');if(genCache.key===key)return genCache.d;
+ const k=KER[S.ker],Am=3.156e27,R=1.987e-3,dt=0.25,steps=Math.round(120/dt);const f=k.ea.map(()=>1);let O=0,G=0,Oexp=0,Gexp=0,Tmax=0;const out=[];
+ const pot=k.hi*S.toc/100;
+ for(let i=0;i<=steps;i++){const t=i*dt,z=Math.min(7000,S.rate*t),Tc=20+S.grad*z/1000,TK=Tc+273.15;Tmax=Math.max(Tmax,Tc);
+  if(i>0){let dTR=0;k.ea.forEach(([ea,w],j)=>{const kk=Am*Math.exp(-ea/(R*TK));const nf=f[j]*Math.exp(-kk*dt);dTR+=w*(f[j]-nf);f[j]=nf;});
+   const dG=dTR*pot;O+=dG*k.of;G+=dG*(1-k.of);const kc=Am*Math.exp(-58/(R*TK));const cr=O*(1-Math.exp(-kc*dt));O-=cr;G+=cr*0.6;
+   const oth=1.2+0.1*S.toc;if(O>oth){Oexp+=O-oth;O=oth;}if(G>0.8){Gexp+=G-0.8;G=0.8;}}
+  const TR=1-k.ea.reduce((s,[ea,w],j)=>s+w*f[j],0);out.push({t,z,Tc,TR,O,G,Oexp,Gexp,Ro:Math.exp(0.0096*Tmax-1.4),pot});}
+ genCache={key,d:out};return out;}
+const roZone=r=>r<0.6?'immature zone':r<1.3?'oil window':r<2?'wet gas and condensate zone':'dry gas zone';
+const M_GEN={id:'gen',num:'4',short:'Generation & migration',topic:'Generation and migration of petroleum',title:'Kerogen Kitchen',
+ goal:'Bury a source rock through 120 million years. Choose the kerogen type and heating history, then watch it mature, generate oil and gas, and expel them.',sw:'#3B3A33',aspect:[0.6,1.3],play:'time',
+ controls:[
+  {id:'ker',type:'select',label:'Kerogen type',options:[['I','Type I · lacustrine algal'],['II','Type II · marine'],['III','Type III · terrestrial plant']],val:'II'},
+  {id:'toc',label:'Total organic carbon',min:0.5,max:12,step:0.1,val:4,f:v=>v.toFixed(1)+' %'},
+  {id:'rate',label:'Burial rate',min:20,max:300,step:5,val:80,f:v=>v+' m/Ma'},
+  {id:'grad',label:'Geothermal gradient',min:20,max:50,step:1,val:32,f:v=>v+' °C/km'},
+  {id:'time',label:'Time since deposition',min:0,max:120,step:0.25,val:45,f:v=>n1(v)+' Ma'}],
+ at(S){const d=genSim(S);return d[clamp(Math.round(S.time/0.25),0,d.length-1)];},
+ readouts(S){const p=this.at(S);const z=roZone(p.Ro);return[['Depth',n0(p.z)+' m'],['Temperature',n0(p.Tc)+' °C'],['Vitrinite reflectance',p.Ro.toFixed(2)+' %Ro'],['Maturity',`<span class="chip ${p.Ro<0.6?'':p.Ro<1.3?'good':'warn'}">${z.replace(' zone','')}</span>`],['Kerogen converted',n0(p.TR*100)+' %'],['Oil expelled',n1(p.Oexp)+' mg/g'],['Gas generated',n1(p.G+p.Gexp)+' mg/g'],['Potential (S2)',n1(p.pot)+' mg/g']];},
+ draw(ctx,W,H,S,t){
+  const d=genSim(S),p=this.at(S),[A,B]=split(W,H,0.56);
+  const ax=axes(ctx,A,{x0:0,x1:120,y0:0,y1:7,xt:[0,20,40,60,80,100,120],yt:[0,1,2,3,4,5,6,7],xTop:true,xl:'Time since deposition (Ma)',yl:'Burial depth (km)',pad:{l:40,r:8,t:40,b:8}});
+  const band=(lo,hi,col,name)=>{const za=clamp((lo-20)/S.grad,0,7),zb=clamp((hi-20)/S.grad,0,7);if(zb<=za)return;ctx.fillStyle=col;ctx.fillRect(ax.px+1,ax.Y(za),ax.pw-2,ax.Y(zb)-ax.Y(za));if(ax.Y(zb)-ax.Y(za)>15)T(ctx,name,ax.px+ax.pw-6,ax.Y(za)+13,{a:'right',s:10,c:C.ink,w:500});};
+  band(100,150,alpha(C.accent,.24),'Peak oil 100–150 °C');band(60,100,alpha(C.accent,.11),'Early oil');band(150,220,alpha(C.gas,.16),'Gas window');band(220,400,alpha(C.shale,.25),'Overmature');
+  ctx.lineWidth=2.5;ctx.strokeStyle=C.ink;ctx.beginPath();d.forEach((q,i)=>{if(q.t>S.time)return;i===0?ctx.moveTo(ax.X(q.t),ax.Y(q.z/1000)):ctx.lineTo(ax.X(q.t),ax.Y(q.z/1000));});ctx.stroke();
+  ctx.lineWidth=1.2;ctx.setLineDash([4,4]);ctx.strokeStyle=C.muted;ctx.beginPath();d.forEach(q=>{if(q.t<S.time)return;ctx.lineTo(ax.X(q.t),ax.Y(q.z/1000));});ctx.stroke();ctx.setLineDash([]);ctx.lineWidth=1;
+  const mx=ax.X(p.t),my=ax.Y(p.z/1000);ctx.fillStyle=C.accent;ctx.beginPath();ctx.arc(mx,my,6,0,TAU);ctx.fill();ctx.strokeStyle=C.surface;ctx.lineWidth=2;ctx.stroke();ctx.lineWidth=1;
+  const lab=`${n0(p.Tc)} °C · ${p.Ro.toFixed(2)} %Ro`;ctx.font=`500 10.5px ${FM}`;const lw=ctx.measureText(lab).width;const lx=mx+10+lw>ax.px+ax.pw?mx-10-lw:mx+10;
+  ctx.fillStyle=alpha(C.surface,.85);ctx.fillRect(lx-3,my-20,lw+6,15);T(ctx,lab,lx,my-9,{s:10.5,w:500,c:C.ink});
+  // B: maturity
+  const rw=58,rx=B.x+4,top=B.y+28,bot=B.y+B.h-14;T(ctx,'%Ro',rx,B.y+14,{s:10.5,c:C.ink,w:500});
+  const ry=v=>lerp(bot,top,(Math.log10(clamp(v,0.2,4))-Math.log10(0.2))/(Math.log10(4)-Math.log10(0.2)));
+  [[0.2,0.6,C.line,'imm.'],[0.6,1.3,C.accent,'oil'],[1.3,2.0,C.gas,'wet gas'],[2.0,4,C.shale,'dry gas']].forEach(([a,b,col,nm])=>{ctx.fillStyle=alpha(col,.5);ctx.fillRect(rx,ry(b),16,ry(a)-ry(b));T(ctx,nm,rx+20,(ry(a)+ry(b))/2,{b:'middle',s:9.5,c:C.ink});});
+  ctx.strokeStyle=C.line;ctx.strokeRect(rx+.5,top+.5,16,bot-top-1);
+  [0.3,0.6,1,1.3,2,3].forEach(v=>{ctx.fillStyle=C.muted;ctx.fillRect(rx-4,ry(v),4,1);});
+  const ryy=ry(p.Ro);ctx.fillStyle=C.ink;ctx.fillRect(rx-2,ryy-1.5,20,3);
+  const gx=B.x+rw+22,gw=B.w-rw-22;
+  const blkY=B.y+90;ctx.fillStyle=mix(C.shale,'#222222',.45);ctx.fillRect(gx,blkY,gw,34);
+  const R=rng(11);for(let i=0;i<70;i++){ctx.fillStyle=alpha('#000000',.35);ctx.fillRect(gx+R()*gw,blkY+R()*34,2,1);}
+  T(ctx,'source rock',gx+6,blkY+20,{s:10,c:'#EEEEEE'});T(ctx,'Expulsion & primary migration',gx,B.y+14,{f:'sans',s:12,w:500,c:C.ink});
+  const i0=clamp(Math.round(S.time/0.25),1,d.length-1);const prev=d[Math.max(0,i0-8)];const rate=(p.Oexp-prev.Oexp)/2,grate=(p.Gexp-prev.Gexp)/2;
+  const no=Math.round(clamp(rate*30,0,22)),ng=Math.round(clamp(grate*30,0,16));const tt=RM?1.3:t;
+  for(let i=0;i<no;i++){const ph=((tt*0.5+i*0.137)%1);ctx.fillStyle=C.accent;ctx.beginPath();ctx.arc(gx+((i*53)%gw),blkY-ph*58,3,0,TAU);ctx.fill();}
+  for(let i=0;i<ng;i++){const ph=((tt*0.8+i*0.21)%1);ctx.strokeStyle=C.gas;ctx.beginPath();ctx.arc(gx+((i*71+20)%gw),blkY-ph*58,2.6,0,TAU);ctx.stroke();}
+  if(no+ng===0)T(ctx,p.Oexp>0?'expulsion has slowed':'no expulsion yet',gx+gw/2,blkY-26,{a:'center',s:10});
+  let y=blkY+60;const mxv=Math.max(p.pot,1);
+  const bar=(lab,val,max,col,txt)=>{T(ctx,lab,gx,y,{s:10.5,c:C.ink});T(ctx,txt,gx+gw,y,{a:'right',s:10.5,c:C.ink,w:500});ctx.fillStyle=alpha(C.line,.5);ctx.fillRect(gx,y+5,gw,10);ctx.fillStyle=col;ctx.fillRect(gx,y+5,gw*clamp(val/max,0,1),10);y+=Math.min(38,(bot-blkY-60)/4+4);};
+  bar('Kerogen converted',p.TR,1,C.ink,n0(p.TR*100)+' %');bar('Oil retained in rock',p.O,mxv,alpha(C.accent,.55),n1(p.O)+' mg/g');bar('Oil expelled',p.Oexp,mxv,C.accent,n1(p.Oexp)+' mg/g');bar('Gas (retained + expelled)',p.G+p.Gexp,mxv,C.gas,n1(p.G+p.Gexp)+' mg/g');
+ },
+ intro:'Where does oil actually come from? From a slow cooking process that lasts millions of years! Here we cook a source rock. Organic matter buried with fine-grained mud is preserved as kerogen. As the rock sinks and heats, kerogen breaks down through chemical reactions whose rates follow the Arrhenius law, so both temperature and time matter: a rock heated slowly for a long time can match one heated quickly to a higher temperature. Type one kerogen, from lake algae, is rich in hydrogen and very oil prone. Type two, typical of marine shales, yields oil and gas. Type three, from land plants, is poor in hydrogen and mainly gives gas. Vitrinite reflectance is our maturity thermometer. Values from about zero point six to one point three percent mark the oil window. Once the rock has generated enough oil to fill its own pores, the excess is expelled in primary migration, then rises by buoyancy through carrier beds in secondary migration. At higher temperatures, leftover oil cracks to gas. Press play to bury the rock through geologic time.',
+ describe(S){const p=this.at(S);let r=`After ${n0(S.time)} million years the source rock lies at ${n0(p.z)} meters and about ${n0(p.Tc)} degrees Celsius. Its vitrinite reflectance is ${p.Ro.toFixed(2)} percent, which places it in the ${roZone(p.Ro)}. About ${n0(p.TR*100)} percent of the kerogen has converted.`;
+  r+=p.Oexp>0.05?` It has expelled about ${n1(p.Oexp)} milligrams of oil per gram of rock`:' It has not yet expelled any oil';r+=`, and holds or has released ${n1(p.G+p.Gexp)} milligrams of gas per gram.`;if(S.ker==='III')r+=' Being type three kerogen, it is mostly a gas source.';return r;},
+ tries:['Run the same burial with Type I and then Type III kerogen. Which expels more oil, and which more gas?','Double the burial rate. Does the oil window start at a higher or lower temperature, and why does time matter?','Find a combination of rate and gradient where the rock never leaves the immature zone within 120 Ma.'],
+ quiz:{q:'A vitrinite reflectance of about 0.6–1.3 %Ro indicates the source rock is…',o:['immature','in the oil window','in the dry gas zone','metamorphosed'],a:1,why:'Below about 0.6 %Ro kerogen is immature. Roughly 0.6–1.3 % is the oil window, then wet gas, then dry gas above about 2 %.'}
+};
+
+/* ========== 5. RESERVOIR ========== */
+let grainCache={key:'',g:null,p:null};
+function grains(S){const key=S.sort.toFixed(2);if(grainCache.key===key)return grainCache;const R=rng(7),g=[],rm=0.11,sig=0.05+0.5*S.sort;
+ const nrm=()=>{let u=0,v=0;while(!u)u=R();while(!v)v=R();return Math.sqrt(-2*Math.log(u))*Math.cos(TAU*v);};
+ for(let a=0;a<6000&&g.length<220;a++){const r=Math.max(0.025,rm*Math.exp(sig*nrm()));const x=(R()*2-1)*1.1,y=(R()*2-1)*1.1;if(x*x+y*y>1.25)continue;
+  let ok=true;for(const q of g){const dx=q.x-x,dy=q.y-y;if(Math.hypot(dx,dy)<(q.r+r)*0.93){ok=false;break;}}if(ok)g.push({x,y,r});}
+ const p=[];for(let a=0;a<4000&&p.length<500;a++){const x=R()*2-1,y=R()*2-1;if(x*x+y*y>1)continue;if(g.some(q=>Math.hypot(q.x-x,q.y-y)<q.r*1.05))continue;p.push({x,y});}
+ grainCache={key,g,p};return grainCache;}
+function resv(S){const phi0=0.42-0.12*S.sort;const phi=Math.max(0.01,phi0*Math.exp(-0.28*S.z)-S.cem/100);const deff=S.d*(1-0.55*S.sort)/1000;
+ const km2=deff*deff*Math.pow(phi,3)/(180*Math.pow(1-phi,2));const k=Math.max(0.001,km2/9.869e-16*0.1);
+ const stoiip=S.area*1e6*S.h*phi*(1-S.sw)/1.25*6.2898/1e6;return{phi,k,stoiip,rec:stoiip*S.rf/100};}
+const kClass=k=>k<1?'tight':k<10?'fair':k<100?'good':k<1000?'very good':'excellent';
+const M_RES={id:'res',num:'5',short:'The reservoir',topic:'The reservoir',title:'Thin-Section Reservoir Lab',
+ goal:'Build a sandstone grain by grain: set grain size, sorting, burial and cement. Then turn its porosity and saturation into barrels in place.',sw:'#D5B163',aspect:[0.6,1.4],
+ controls:[
+  {id:'d',label:'Mean grain size',min:0.0625,max:2,step:0.0125,val:0.25,f:v=>v<1?Math.round(v*1000)+' µm':v.toFixed(2)+' mm'},
+  {id:'sort',label:'Sorting (well → poor)',min:0,max:1,step:0.05,val:0.25,f:v=>v<0.2?'very well':v<0.45?'well':v<0.7?'moderate':'poor'},
+  {id:'z',label:'Burial depth',min:0,max:5,step:0.1,val:2,f:v=>v.toFixed(1)+' km'},
+  {id:'cem',label:'Quartz / calcite cement',min:0,max:20,step:0.5,val:3,f:v=>v.toFixed(1)+' %'},
+  {id:'sw',label:'Water saturation Sw',min:0.1,max:1,step:0.01,val:0.3,f:v=>Math.round(v*100)+' %'},
+  {id:'area',label:'Field area',min:1,max:50,step:1,val:8,f:v=>v+' km²'},
+  {id:'h',label:'Net pay thickness',min:5,max:100,step:1,val:25,f:v=>v+' m'},
+  {id:'rf',label:'Recovery factor',min:5,max:60,step:1,val:30,f:v=>v+' %'}],
+ readouts(S){const r=resv(S);return[['Porosity',n1(r.phi*100)+' %'],['Permeability',(r.k<10?r.k.toFixed(2):n0(r.k))+' mD'],['Quality',`<span class="chip ${r.k<1?'bad':r.k<10?'warn':'good'}">${kClass(r.k)}</span>`],['Oil in place',n0(r.stoiip)+' MMbbl'],['Recoverable',n0(r.rec)+' MMbbl']];},
+ draw(ctx,W,H,S,t){
+  const r=resv(S),gc=grains(S),[A,B]=split(W,H,0.5);
+  const R=Math.min(A.w/2-6,(A.h-58)/2),cx=A.x+A.w/2,cy=A.y+24+R;
+  T(ctx,'Thin section · plane light',A.x,A.y+12,{f:'sans',s:12,w:500,c:C.ink});
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,TAU);ctx.clip();
+  ctx.fillStyle=mix(C.water,C.surface,.55);ctx.fillRect(cx-R,cy-R,2*R,2*R);
+  const no=Math.round((1-S.sw)*gc.p.length);ctx.fillStyle='#B8740F';for(let i=0;i<no;i++){const q=gc.p[i];ctx.beginPath();ctx.arc(cx+q.x*R,cy+q.y*R,R*0.075,0,TAU);ctx.fill();}
+  const ex=1+0.05*S.z,cw=(S.cem/20)*R*0.035;
+  gc.g.forEach(q=>{const gx=cx+q.x*R,gy=cy+q.y*R,gr=q.r*R*ex;
+   if(cw>0.2){ctx.fillStyle=mix(C.carb,'#FFFFFF',.35);ctx.beginPath();ctx.arc(gx,gy,gr+cw,0,TAU);ctx.fill();}
+   ctx.fillStyle=mix('#E9DCB8',C.sand,.35);ctx.beginPath();ctx.arc(gx,gy,gr,0,TAU);ctx.fill();ctx.strokeStyle=alpha('#5A4A2A',.45);ctx.stroke();});
+  ctx.restore();ctx.strokeStyle=C.ink;ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,R,0,TAU);ctx.stroke();ctx.lineWidth=1;
+  const fov=2*S.d/0.22;const opts=[0.05,0.1,0.2,0.5,1,2,5];const bl=opts.reduce((a,b)=>Math.abs(b-fov/4)<Math.abs(a-fov/4)?b:a);const blp=bl/fov*2*R;
+  const sy=cy+R+16;ctx.fillStyle=C.ink;ctx.fillRect(A.x+4,sy,blp,3);T(ctx,bl<1?Math.round(bl*1000)+' µm':bl+' mm',A.x+blp+10,sy+4,{s:10,c:C.ink});
+  const leg=[[mix('#E9DCB8',C.sand,.35),'grain'],[mix(C.carb,'#FFFFFF',.35),'cement'],['#B8740F','oil'],[mix(C.water,C.surface,.55),'water']];
+  let lx=A.x+A.w;for(let i=leg.length-1;i>=0;i--){const [c,n]=leg[i];ctx.font=`400 10px ${FM}`;lx-=ctx.measureText(n).width+22;ctx.fillStyle=c;ctx.fillRect(lx,sy-4,10,10);ctx.strokeStyle=C.line;ctx.strokeRect(lx+.5,sy-3.5,9,9);T(ctx,n,lx+14,sy+5,{s:10,c:C.ink});}
+  let y=B.y+16;
+  y=gauge(ctx,B.x,y,B.w,{label:'Porosity φ',vtxt:n1(r.phi*100)+' %',value:r.phi*100,min:0,max:40,bands:[[0,5,C.bad,'neg.'],[5,10,C.warn,'poor'],[10,15,C.sand,'fair'],[15,20,C.good,'good'],[20,40,C.good,'very good']],ticks:[0,10,20,30,40],tf:v=>v+'%'});
+  y=gauge(ctx,B.x,y+6,B.w,{label:'Permeability k',vtxt:(r.k<10?r.k.toFixed(2):n0(r.k))+' mD',value:r.k,min:0.01,max:1e4,log:true,bands:[[0.01,1,C.bad,'tight'],[1,10,C.warn,'fair'],[10,100,C.sand,'good'],[100,1000,C.good,'v. good'],[1000,1e4,C.good,'excellent']],ticks:[0.01,1,100,1e4],tf:v=>v<1?v:n0(v)});
+  y+=10;T(ctx,'Volumetrics (Bo = 1.25)',B.x,y,{f:'sans',s:12,w:500,c:C.ink});y+=12;
+  const mx=Math.max(50,Math.ceil(r.stoiip/50)*50);
+  [['Oil in place',r.stoiip,alpha(C.accent,.45)],['Recoverable',r.rec,C.accent]].forEach(([n,v,c])=>{T(ctx,n,B.x,y+10,{s:10.5,c:C.ink});T(ctx,n0(v)+' MMbbl',B.x+B.w,y+10,{a:'right',s:10.5,w:500,c:C.ink});ctx.fillStyle=alpha(C.line,.5);ctx.fillRect(B.x,y+15,B.w,12);ctx.fillStyle=c;ctx.fillRect(B.x,y+15,B.w*clamp(v/mx,0,1),12);y+=36;});
+  if(B.y+B.h-y>36){T(ctx,'N = A · h · φ · (1 − Sw) / Bo',B.x,y+8,{s:11,c:C.muted});T(ctx,`= ${S.area} km² · ${S.h} m · ${r.phi.toFixed(3)} · ${(1-S.sw).toFixed(2)} / 1.25`,B.x,y+24,{s:10,c:C.muted});}
+ },
+ intro:'Picture oil hiding in the tiny spaces between sand grains. A reservoir rock has two jobs: store fluid and let it flow. Storage is porosity, the fraction of the rock that is pore space. Flow is permeability, measured in millidarcies. Well-sorted grains, all about the same size, leave large, open pores, while poor sorting lets small grains fill the gaps between big ones. With burial, grains are squeezed together and minerals such as quartz or calcite grow as cement, and both processes destroy porosity. Permeability depends strongly on the size of pore throats, so coarse sand flows far better than fine sand even at the same porosity. In the thin section, oil sits in the middle of the pores while water coats the grains, as in a water-wet rock. Finally we turn rock properties into barrels with a volumetric estimate: area times net pay times porosity times oil saturation, divided by the formation volume factor.',
+ describe(S){const r=resv(S);return`This sandstone has a mean grain size of ${S.d<1?Math.round(S.d*1000)+' micrometers':S.d.toFixed(1)+' millimeters'}, is buried to ${S.z.toFixed(1)} kilometers and carries ${S.cem.toFixed(0)} percent cement. Its porosity is ${n1(r.phi*100)} percent and its permeability about ${r.k<10?r.k.toFixed(1):n0(r.k)} millidarcies, which rates as ${kClass(r.k)}. With ${Math.round((1-S.sw)*100)} percent oil saturation over ${S.area} square kilometers and ${S.h} meters of net pay, the field holds roughly ${n0(r.stoiip)} million barrels in place, and about ${n0(r.rec)} million are recoverable.`;},
+ tries:['Hold everything else steady and move sorting from very well to poor. Which drops faster, porosity or permeability?','Compare a fine sand (100 µm) with a coarse sand (1 mm). Why does permeability change so much more than porosity?','Bury the sand to 4.5 km with 12 % cement. Is it still a commercial reservoir?'],
+ quiz:{q:'Permeability is most strongly controlled by…',o:['pore throat size','the API gravity of the oil','the area of the field','the colour of the grains'],a:0,why:'Flow is limited by the narrowest connections between pores. Kozeny–Carman scales permeability with grain size squared, so small throats choke flow even when porosity is decent.'}
+};
+
+/* ========== 6. TRAPS & SEALS ========== */
+const TRAPS={
+ anticline:{n:'anticline',crestX:.5,blocks:[{xa:0,xb:1,f:x=>1000+(x<.5?1000:1600)*(x-.5)**2,thk:()=>80}]},
+ fault:{n:'fault trap',crestX:.63,fault:.65,blocks:[{xa:0,xb:.65,f:x=>1250-250*(x/.65),thk:()=>80},{xa:.65,xb:1,f:x=>1330+60*(x-.65)/.35,thk:()=>80,dry:true}]},
+ pinchout:{n:'stratigraphic pinchout',crestX:.78,blocks:[{xa:0,xb:1,f:x=>x<=.8?1250-250*x/.8:1000-250*(x-.8)/.8,thk:x=>x<.8?80*(1-x/.8):0}]},
+ salt:{n:'salt dome flank trap',crestX:.66,salt:true,blocks:[{xa:0,xb:.68,f:x=>1250-250*Math.pow(Math.min(x,.68)/.68,2),thk:()=>80}]}};
+function trapCalc(S){const gas=S.fluid==='gas';const g=gas?0.06:0.03,dr=gas?830:270;const rs=Math.pow(10,S.seal)*1e-6;const Pcs=2*g/rs,Pcr=2*g/10e-6;
+ const hs=Math.max(0,(Pcs-Pcr)/(dr*9.81));const charge=S.charge/100*250;const col=Math.min(charge,250,hs);
+ const leak=hs<Math.min(charge,250),spill=!leak&&charge>250;return{Pcs,hs,charge,col,leak,spill,gas};}
+const M_TRAP={id:'trap',num:'6',short:'Traps & seals',topic:'Traps and seals',title:'Trap Charger',
+ goal:'Charge four classic traps with oil or gas. Tune the seal’s pore throats and the charge volume, and find out whether the trap fills, spills or leaks.',sw:'#5D6A71',aspect:[0.56,1.0],
+ controls:[
+  {id:'type',type:'select',label:'Trap style',options:[['anticline','Anticline (structural)'],['fault','Fault trap (structural)'],['pinchout','Pinchout (stratigraphic)'],['salt','Salt dome flank']],val:'anticline'},
+  {id:'fluid',type:'select',label:'Hydrocarbon',options:[['oil','Oil (780 kg/m³)'],['gas','Gas (220 kg/m³)']],val:'oil'},
+  {id:'seal',label:'Seal pore-throat radius',min:-2.5,max:-0.3,step:0.05,val:-1.3,f:v=>{const r=Math.pow(10,v);return r<0.1?Math.round(r*1000)+' nm':r.toFixed(2)+' µm';}},
+  {id:'charge',label:'Charge volume (vs closure)',min:0,max:160,step:1,val:80,f:v=>v+' %'}],
+ readouts(S){const c=trapCalc(S);return[['Seal entry pressure',n2(c.Pcs/1e6)+' MPa'],['Seal capacity',(c.hs>9999?'>9,999':n0(c.hs))+' m'],['Structural closure','250 m'],['Charge column',n0(c.charge)+' m'],['Trapped column',n0(c.col)+' m'],['Status',c.leak?'<span class="chip bad">seal leaking</span>':c.spill?'<span class="chip warn">filled to spill</span>':c.col>0?'<span class="chip good">underfilled</span>':'<span class="chip">dry</span>']];},
+ draw(ctx,W,H,S,t){
+  const tr=TRAPS[S.type],c=trapCalc(S);const r={x:0,y:0,w:W,h:H};
+  const X=x=>r.x+48+x*(r.w-56),Y=d=>r.y+18+(d-800)/(1700-800)*(r.h-26);
+  const top=Y(800),botY=Y(1700);
+  ctx.fillStyle=mix(C.shale,C.surface,.6);ctx.fillRect(X(0),top,X(1)-X(0),botY-top);
+  const poly=(b,fa,fb,col)=>{ctx.fillStyle=col;ctx.beginPath();const n=80;for(let i=0;i<=n;i++){const x=lerp(b.xa,b.xb,i/n);ctx.lineTo(X(x),Y(clamp(fa(x),800,1700)));}for(let i=n;i>=0;i--){const x=lerp(b.xa,b.xb,i/n);ctx.lineTo(X(x),Y(clamp(fb(x),800,1700)));}ctx.closePath();ctx.fill();};
+  tr.blocks.forEach(b=>{poly(b,x=>800,x=>b.f(x)-60,mix(C.shale,C.surface,.6));poly(b,x=>b.f(x)-60,x=>b.f(x),C.shale);poly(b,x=>b.f(x),x=>b.f(x)+b.thk(x),C.sand);poly(b,x=>b.f(x)+b.thk(x),x=>1700,mix(C.shale,C.surface,.4));
+   ctx.strokeStyle=alpha(C.ink,.14);[-160,-260,-360,180,280].forEach(o=>{ctx.beginPath();for(let i=0;i<=60;i++){const x=lerp(b.xa,b.xb,i/60);const dd=b.f(x)+o;if(dd>800&&dd<1700)ctx.lineTo(X(x),Y(dd));}ctx.stroke();});});
+  const contact=1000+c.col;const fill=c.gas?alpha(C.gas,.75):alpha(C.accent,.85);let fx0=1e9,fx1=-1e9;
+  tr.blocks.forEach(b=>{if(b.dry)return;for(let px=X(b.xa);px<=X(b.xb);px+=1.5){const x=(px-X(0))/(X(1)-X(0));const yt=b.f(x),th=b.thk(x);if(th<=0.5||yt>=contact)continue;const yb=Math.min(yt+th,contact);ctx.fillStyle=fill;ctx.fillRect(px,Y(yt),1.6,Y(yb)-Y(yt));fx0=Math.min(fx0,px);fx1=Math.max(fx1,px);}});
+  if(tr.salt){ctx.fillStyle=C.salt;ctx.beginPath();[[.68,1700],[.68,1150],[.71,920],[.78,850],[.9,835],[1,850],[1,1700]].forEach(([x,d])=>ctx.lineTo(X(x),Y(d)));ctx.closePath();ctx.fill();ctx.strokeStyle=C.muted;ctx.stroke();T(ctx,'SALT',X(.84),Y(1250),{a:'center',s:13,w:500,c:C.ink});}
+  if(tr.fault){ctx.strokeStyle=C.ink;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(X(tr.fault),top);ctx.lineTo(X(tr.fault),botY);ctx.stroke();ctx.lineWidth=1;T(ctx,'sealing fault',X(tr.fault)+6,Y(860),{s:10,c:C.ink});
+   ctx.beginPath();ctx.moveTo(X(tr.fault)-10,Y(1500));ctx.lineTo(X(tr.fault)-10,Y(1440));ctx.moveTo(X(tr.fault)+10,Y(1440));ctx.lineTo(X(tr.fault)+10,Y(1500));ctx.stroke();}
+  if(c.col>0&&fx1>fx0){ctx.strokeStyle=c.gas?C.gas:C.water;ctx.setLineDash([5,4]);ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(fx0-6,Y(contact));ctx.lineTo(fx1+6,Y(contact));ctx.stroke();ctx.setLineDash([]);ctx.lineWidth=1;
+   T(ctx,`${c.gas?'GWC':'OWC'} ${n0(contact)} m`,Math.max(X(0)+4,fx0-4),Y(contact)+14,{s:10.5,w:500,c:C.ink});}
+  const sy=Y(1250);ctx.fillStyle=C.ink;ctx.beginPath();ctx.arc(X(0),sy,4,0,TAU);ctx.fill();T(ctx,'spill point 1,250 m',X(0)+8,sy-8,{s:10,c:C.ink});
+  if(c.hs<250){ctx.strokeStyle=C.bad;ctx.setLineDash([2,4]);ctx.beginPath();ctx.moveTo(X(0),Y(1000+c.hs));ctx.lineTo(X(1),Y(1000+c.hs));ctx.stroke();ctx.setLineDash([]);T(ctx,`seal capacity ${n0(c.hs)} m`,X(1)-4,Y(1000+c.hs)-5,{a:'right',s:10,c:C.bad,w:500});}
+  T(ctx,'seal',X(.14),Y(tr.blocks[0].f(.14)-30),{a:'center',b:'middle',s:10,c:'#F0F0F0'});
+  T(ctx,'reservoir',X(.2),Y(tr.blocks[0].f(.2)+40),{a:'center',b:'middle',s:10,c:'#2A1B0C'});
+  const tt=RM?0.7:t;const cxp=X(tr.crestX);
+  if(c.leak){for(let i=0;i<14;i++){const ph=(tt*0.35+i/14)%1;const yy=Y(1000)-ph*(Y(1000)-top);ctx.globalAlpha=1-ph;ctx.fillStyle=c.gas?C.gas:C.accent;ctx.beginPath();ctx.arc(cxp+Math.sin(ph*12+i)*10,yy,3,0,TAU);ctx.fill();}ctx.globalAlpha=1;T(ctx,'leaking through seal',cxp+16,top+14,{s:10.5,w:500,c:C.bad});}
+  if(c.spill){for(let i=0;i<8;i++){const ph=(tt*0.4+i/8)%1;ctx.globalAlpha=1-ph;ctx.fillStyle=c.gas?C.gas:C.accent;ctx.beginPath();ctx.arc(X(0)+20-ph*22,sy+4-ph*30,3,0,TAU);ctx.fill();}ctx.globalAlpha=1;T(ctx,'excess escapes at spill point',X(0)+8,sy+22,{s:10,c:C.warn,w:500});}
+  if(S.charge>0){const ax=X(.32),ay0=botY-6,ay1=Y(tr.blocks[0].f(.32)+90);ctx.strokeStyle=c.gas?C.gas:C.accent;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(ax,ay0);ctx.lineTo(ax,ay1);ctx.stroke();ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(ax-5,ay1+7);ctx.lineTo(ax,ay1);ctx.lineTo(ax+5,ay1+7);ctx.stroke();T(ctx,'charge from source',ax+6,ay0-4,{s:10,c:C.ink});}
+  [900,1100,1300,1500,1700].forEach(d=>{T(ctx,n0(d),X(0)-6,Y(d),{a:'right',b:'middle',s:10});});T(ctx,'m',X(0)-6,r.y+8,{a:'right',s:10});
+ },
+ intro:'Oil and gas always want to rise. So what stops them? A trap. A trap needs a reservoir, a seal on top, and a shape that holds buoyant oil or gas in place. Here you can test four classic traps: an anticline, a fault trap, a stratigraphic pinchout and a salt dome flank. The first two are structural traps, made by folding and faulting. The pinchout is stratigraphic, made by the reservoir itself thinning out. Seals work by capillary pressure. Their pore throats are so tiny that oil or gas cannot squeeze through until the buoyancy of the column below exceeds the seal’s entry pressure, and taller columns push harder. So the column a trap can hold is limited either by its geometry, at the spill point, or by its seal capacity. Gas is much lighter than water, so each meter of gas column pushes harder than a meter of oil and needs a better seal. Adjust the charge and seal quality and see which limit wins.',
+ describe(S){const c=trapCalc(S),tr=TRAPS[S.type];const rr=Math.pow(10,S.seal);let r=`This ${tr.n} has 250 meters of closure down to its spill point. The seal pore throats are about ${rr<0.1?Math.round(rr*1000)+' nanometers':rr.toFixed(2)+' micrometers'}, giving an entry pressure of ${n2(c.Pcs/1e6)} megapascals, enough to hold roughly ${c.hs>9999?'more than ten thousand':n0(c.hs)} meters of ${S.fluid} column.`;
+  r+=c.leak?` The charge would build a taller column than that, so the seal is leaking at the crest and the trap holds only ${n0(c.col)} meters.`:c.spill?' The charge exceeds the closure, so the trap is filled to its spill point and the excess migrates onward to the next trap.':c.col>0?` The trap is underfilled, holding a ${n0(c.col)} meter column.`:' No hydrocarbons have arrived, so the trap is dry.';return r;},
+ tries:['Keep the same seal and switch from oil to gas. Why does the trapped column shrink?','Find the seal pore-throat radius that just holds the full 250 m oil column.','Overcharge to 150 % with a strong seal. Where does the extra oil go, and what might be found up-dip?'],
+ quiz:{q:'A trap described as “filled to spill point” means…',o:['the hydrocarbon–water contact has reached the spill point and extra charge escapes laterally','the seal has fractured','the reservoir has zero porosity','gas has displaced all the oil'],a:0,why:'Once the contact reaches the structure’s lowest closing contour, any additional petroleum spills out under the edge and migrates up-dip, a process called fill-and-spill.'}
+};
+
+/* ========== 8. BASINS & PETROLEUM SYSTEMS ========== */
+const BASINS={rift:{n:'Rift basin',grad:40,rate:150},passive:{n:'Passive margin',grad:28,rate:60},foreland:{n:'Foreland basin',grad:25,rate:200},intra:{n:'Intracratonic sag',grad:22,rate:20}};
+const PERIODS=[[299,252,'Permian','P'],[252,201,'Triassic','Tr'],[201,145,'Jurassic','J'],[145,66,'Cretaceous','K'],[66,23,'Paleogene','Pg'],[23,2.6,'Neogene','N'],[2.6,0,'Quaternary','Q']];
+function psys(S){const b=BASINS[S.basin];const tOil=80/b.grad*1000/b.rate,tWin=50/b.grad*1000/b.rate;const G1=S.src-tOil,G2=S.src-tOil-tWin,CM=(G1+G2)/2;
+ const st=(age)=>age>=G1?'ok':age>=G2?'part':'fail';const checks=[];
+ checks.push(['Source matured',G1>=0?'ok':'fail',G1>=0?`entered oil window ${n0(G1)} Ma`:`still immature (needs ${n0(-G1)} Ma more)`]);
+ checks.push(['Reservoir in place',G1<0?'fail':st(S.res),S.res>=G1?'deposited before charge':S.res>=G2?'catches only late charge':'deposited after migration']);
+ let sl=G1<0?'fail':st(S.seal);let sm=S.seal>=G1?'deposited before charge':S.seal>=G2?'caps only late charge':'deposited after migration';if(S.seal>S.res){sl='fail';sm='older than reservoir, so it lies beneath it';}
+ checks.push(['Seal in place',sl,sm]);
+ checks.push(['Trap formed in time',G1<0?'fail':st(S.trap),S.trap>=G1?'formed before generation':S.trap>=G2?'formed during generation':'formed after migration ended']);
+ const score=checks.reduce((s,c)=>s*(c[1]==='ok'?1:c[1]==='part'?0.5:0),1);
+ return{b,tOil,tWin,G1,G2,CM,checks,score,gasPhase:G2>0};}
+const M_SYS={id:'sys',num:'8',short:'Basins & petroleum systems',topic:'Sedimentary basins and petroleum systems',title:'Petroleum System Event Chart',
+ goal:'Pick a basin type and date each element and process. The chart shows whether the trap, seal and reservoir were ready when the source rock charged.',sw:'#9E6E00',aspect:[0.58,1.15],
+ controls:[
+  {id:'basin',type:'select',label:'Basin type',options:[['rift','Rift basin · hot, fast'],['passive','Passive margin · moderate'],['foreland','Foreland basin · cool, fast burial'],['intra','Intracratonic sag · cool, slow']],val:'passive'},
+  {id:'src',label:'Source rock deposited',min:40,max:299,step:1,val:180,f:v=>v+' Ma'},
+  {id:'res',label:'Reservoir deposited',min:5,max:299,step:1,val:160,f:v=>v+' Ma'},
+  {id:'seal',label:'Seal deposited',min:5,max:299,step:1,val:150,f:v=>v+' Ma'},
+  {id:'trap',label:'Trap formed',min:0,max:299,step:1,val:140,f:v=>v+' Ma'}],
+ readouts(S){const p=psys(S);const tag=s=>`<span class="chip ${s==='ok'?'good':s==='part'?'warn':'bad'}">${s==='ok'?'yes':s==='part'?'partly':'no'}</span>`;
+  const out=p.checks.map(c=>[c[0],tag(c[1])]);out.push(['Oil window reached',p.G1>=0?n0(p.G1)+' Ma':'not yet']);out.push(['Critical moment',p.CM>=0?n0(p.CM)+' Ma':'—']);out.push(['Charge efficiency',`<span class="chip ${p.score>=1?'good':p.score>0?'warn':'bad'}">${Math.round(p.score*100)} %</span>`]);return out;},
+ draw(ctx,W,H,S,t){
+  const p=psys(S);const narrow=W<560;const lw=narrow?92:148;const x0=lw+8,x1=W-8;const X=a=>lerp(x0,x1,(300-a)/300);
+  const top=48;const rows=['Source rock','Reservoir rock','Seal rock','Overburden','Trap formation','Generation–migration','Preservation'];const rh=(H-top-44)/rows.length;
+  PERIODS.forEach(([a,b,n,s],i)=>{ctx.fillStyle=i%2?alpha(C.line,.55):alpha(C.line,.25);ctx.fillRect(X(a),20,X(b)-X(a),20);ctx.font=`500 10px ${FM}`;const lab=ctx.measureText(n).width<X(b)-X(a)-6?n:s;if(ctx.measureText(lab).width<X(b)-X(a)-2)T(ctx,lab,(X(a)+X(b))/2,30,{a:'center',b:'middle',s:10,c:C.ink,w:500});});
+  T(ctx,'Age (Ma)',0,32,{s:10,c:C.ink});
+  [300,250,200,150,100,50,0].forEach(a=>{ctx.fillStyle=C.muted;ctx.fillRect(X(a),40,1,H-84);T(ctx,a,X(a),H-26,{a:a===300?'left':a===0?'right':'center',s:10});});
+  ctx.strokeStyle=alpha(C.line,.6);for(let i=0;i<=rows.length;i++){const y=top+i*rh;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  rows.forEach((n,i)=>{T(ctx,narrow?n.replace(' rock','').replace('Generation–migration','Gen.–migr.').replace('Trap formation','Trap'):n,0,top+i*rh+rh/2,{b:'middle',s:narrow?10:11,f:'sans',c:C.ink,w:500});});
+  const blk=(row,a,b,col,hatch)=>{const y=top+row*rh+rh*0.22,h=rh*0.56;const xa=X(Math.min(299.5,a)),xb=X(Math.max(0,b));if(xb<=xa)return;ctx.fillStyle=col;ctx.fillRect(xa,y,xb-xa,h);if(hatch){ctx.save();ctx.beginPath();ctx.rect(xa,y,xb-xa,h);ctx.clip();ctx.strokeStyle=alpha(C.ink,.25);for(let k=xa-h;k<xb;k+=7){ctx.beginPath();ctx.moveTo(k,y+h);ctx.lineTo(k+h,y);ctx.stroke();}ctx.restore();}};
+  blk(0,S.src+3,S.src-3,C.ink);blk(1,S.res+3,S.res-3,C.sand);blk(2,S.seal+3,S.seal-3,C.shale);blk(3,Math.min(S.seal,S.res,S.src),0,alpha(C.shale,.35),true);
+  blk(4,S.trap+2,S.trap-2,C.water);blk(4,S.trap-2,0,alpha(C.water,.25));
+  if(p.G1>=0){blk(5,p.G1,Math.max(0,p.G2),C.accent);if(p.G2>0)blk(6,p.G2,0,alpha(C.good,.35),true);}else{T(ctx,'source not yet in oil window',X(150),top+5*rh+rh/2,{a:'center',b:'middle',s:10.5,c:C.bad,w:500});}
+  if(p.CM>=0){const cx=X(p.CM);ctx.strokeStyle=C.ink;ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(cx,40);ctx.lineTo(cx,H-44);ctx.stroke();ctx.setLineDash([]);
+   const pul=RM?1:1+0.15*Math.sin(t*3);ctx.fillStyle=C.accent;ctx.beginPath();const yy=H-36,s=7*pul;ctx.moveTo(cx,yy-s);ctx.lineTo(cx+s,yy);ctx.lineTo(cx,yy+s);ctx.lineTo(cx-s,yy);ctx.fill();
+   T(ctx,`critical moment ${n0(p.CM)} Ma`,cx+(cx>W*0.6?-12:12),H-6,{a:cx>W*0.6?'right':'left',s:10.5,w:500,c:C.ink});}
+  const ok=p.score>=1;T(ctx,`${p.b.n} · ${p.b.grad} °C/km · ${p.b.rate} m/Ma burial`,0,12,{s:10.5,c:C.muted});
+  T(ctx,ok?'SYSTEM WORKS':p.score>0?'PARTIAL CHARGE':'SYSTEM FAILS',W,12,{a:'right',s:11,w:500,c:ok?C.good:p.score>0?C.warn:C.bad});
+ },
+ intro:'Can a perfect trap still be completely dry? Absolutely, if the timing is wrong! A petroleum system ties every topic together. It is an active source rock plus all the oil and gas it has generated, and every geologic element and process needed for an accumulation to exist. The elements are the source, reservoir, seal and overburden rocks. The processes are trap formation and the generation, migration and accumulation of petroleum. Timing is everything. If the trap forms after the oil has already migrated past, the trap stays dry. Geologists summarise this on an event chart, and they mark the critical moment, the time of peak generation and migration. Basin type controls heat flow and burial rate, so it decides how fast the source reaches the oil window. Rifts are hot and subside quickly. Intracratonic sags are cool and slow. Set the ages and check whether your system works.',
+ describe(S){const p=psys(S);let r=`In this ${p.b.n.toLowerCase()}, with a ${p.b.grad} degree per kilometer gradient and ${p.b.rate} meters of burial per million years, a source rock deposited at ${S.src} million years ago`;
+  r+=p.G1>=0?` entered the oil window about ${n0(p.G1)} million years ago, with the critical moment near ${n0(p.CM)} million years.`:` has not yet reached the oil window.`;
+  const bad=p.checks.filter(c=>c[1]!=='ok');r+=bad.length?' Problems: '+bad.map(c=>`${c[0].toLowerCase()}, ${c[2]}`).join('; ')+'.':' The reservoir, seal and trap were all in place before charge, so the system works.';
+  r+=` Charge efficiency is ${Math.round(p.score*100)} percent.`;return r;},
+ tries:['In the passive margin, delay trap formation to 90 Ma. What happens to charge efficiency, and why?','Switch to an intracratonic sag. Why does the same source take so long to mature?','Make the seal older than the reservoir. Why does the chart reject it?'],
+ quiz:{q:'The “critical moment” on a petroleum system event chart is…',o:['the time of peak generation, migration and accumulation','the age of the source rock','the date the discovery well was drilled','the moment the seal fails'],a:0,why:'Magoon and Dow defined the critical moment as the time that best depicts generation–migration–accumulation of most of the petroleum in a system. Traps must exist by then.'}
+};
+
+/* ========== 9. NONCONVENTIONAL ========== */
+function shale(S){const k=Math.pow(10,S.logk);let qi;const spacing=S.lat/S.stages;
+ if(S.comp==='hz'){const eff=S.stages*Math.min(1,Math.pow(spacing/50,0.5));qi=22*eff*Math.pow(S.lat/2500,0.3)*Math.sqrt(k/100);}else qi=6*Math.sqrt(k/100);
+ const De=S.decl/100,b=S.b,Di=b>0.01?(Math.pow(1-De,-b)-1)/b:-Math.log(1-De);const q=t=>qi/Math.pow(1+b*Di*t,1/b);
+ let cum=0,c2=0;for(let t=0;t<30;t+=1/24){const qq=q(t);if(qq<5)break;cum+=qq*365/24;if(t<2)c2+=qq*365/24;}
+ const qc=t=>600*Math.exp(-0.12*t);let cc=0;for(let t=0;t<30;t+=1/24){const qq=qc(t);if(qq<5)break;cc+=qq*365/24;}
+ return{qi,q,qc,eur:cum,f2:c2/Math.max(cum,1),ceur:cc,k,spacing};}
+const M_UNC={id:'unc',num:'9',short:'Nonconventional resources',topic:'Nonconventional petroleum resources',title:'Shale Well Designer',
+ goal:'Design a shale oil well: lateral length, frac stages and rock quality. Compare its steep decline and ultimate recovery with a conventional well.',sw:'#2E2B2A',aspect:[0.6,1.35],
+ controls:[
+  {id:'comp',type:'select',label:'Completion',options:[['hz','Horizontal + multistage frac'],['vt','Vertical, no stimulation']],val:'hz'},
+  {id:'lat',label:'Lateral length',min:1000,max:4000,step:50,val:2500,f:v=>n0(v)+' m'},
+  {id:'stages',label:'Frac stages',min:5,max:80,step:1,val:40,f:v=>v},
+  {id:'logk',label:'Matrix permeability',min:0.5,max:3.5,step:0.05,val:2,f:v=>{const k=Math.pow(10,v);return n0(k)+' nD';}},
+  {id:'b',label:'Arps b-factor',min:0.3,max:1.6,step:0.05,val:1.0,f:v=>v.toFixed(2)},
+  {id:'decl',label:'First-year decline',min:40,max:85,step:1,val:65,f:v=>v+' %'}],
+ readouts(S){const s=shale(S);return[['Initial rate',n0(s.qi)+' bbl/d'],['Rate after 1 yr',n0(s.q(1))+' bbl/d'],['30-yr EUR',n0(s.eur/1000)+' kbbl'],['Recovered in 2 yrs',n0(s.f2*100)+' %'],['Stage spacing',S.comp==='hz'?n0(s.spacing)+' m':'—'],['Conventional EUR',n0(s.ceur/1000)+' kbbl'],['Wells to match',s.ceur/s.eur>100?'>100 · uneconomic':(s.ceur/s.eur).toFixed(1)]];},
+ draw(ctx,W,H,S,t){
+  const s=shale(S),[A,B]=split(W,H,0.5);
+  const sy=A.y+30,ty=A.y+A.h*0.58,th=Math.min(60,A.h*0.22);
+  ctx.fillStyle=mix(C.shale,C.surface,.65);ctx.fillRect(A.x,sy,A.w,ty-sy);ctx.fillStyle=mix(C.shale,'#1A1A1A',.35);ctx.fillRect(A.x,ty,A.w,th);ctx.fillStyle=mix(C.carb,C.surface,.3);ctx.fillRect(A.x,ty+th,A.w,A.y+A.h-ty-th);
+  ctx.strokeStyle=alpha(C.ink,.12);for(let y=sy+20;y<ty;y+=22){ctx.beginPath();ctx.moveTo(A.x,y);ctx.lineTo(A.x+A.w,y);ctx.stroke();}
+  T(ctx,`Shale source-reservoir · ${n0(s.k)} nD`,A.x+6,ty+th-8,{s:10,c:'#EAEAEA'});
+  ctx.strokeStyle=C.ink;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(A.x,sy);ctx.lineTo(A.x+A.w,sy);ctx.stroke();
+  const wx=A.x+A.w*0.12;ctx.beginPath();ctx.moveTo(wx-10,sy);ctx.lineTo(wx,sy-24);ctx.lineTo(wx+10,sy);ctx.moveTo(wx-6,sy-9);ctx.lineTo(wx+6,sy-9);ctx.stroke();
+  const my=ty+th/2,R=Math.min(30,(my-sy)*0.4);const tt=RM?2:t;
+  ctx.strokeStyle=C.ink;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(wx,sy);
+  if(S.comp==='hz'){const L=(S.lat/4000)*(A.w*0.84-R);ctx.lineTo(wx,my-R);ctx.quadraticCurveTo(wx,my,wx+R,my);ctx.lineTo(wx+R+L,my);ctx.stroke();ctx.lineWidth=1;
+   const hx0=wx+R,step=L/S.stages;const hl=th*0.5*1.45;
+   for(let i=0;i<S.stages;i++){const fx=hx0+step*(i+.5);const g=RM?1:0.75+0.25*Math.sin(tt*2+i*0.7);ctx.strokeStyle=alpha(C.accent,.85);ctx.lineWidth=step>4?1.6:1;ctx.beginPath();ctx.moveTo(fx,my-hl*g);ctx.lineTo(fx,my+hl*g);ctx.stroke();}ctx.lineWidth=1;
+   const Rr=rng(5);for(let i=0;i<70;i++){const bx=hx0+Rr()*L,by=ty+4+Rr()*(th-8);const fi=Math.floor((bx-hx0)/step);const fx=hx0+step*(clamp(fi,0,S.stages-1)+.5);const ph=((tt*0.3+Rr())%1);ctx.fillStyle=alpha(C.accent,1-ph*0.6);ctx.beginPath();ctx.arc(lerp(bx,fx,ph),by,1.6,0,TAU);ctx.fill();}
+   T(ctx,`${n0(S.lat)} m lateral · ${S.stages} stages`,wx+R,my-hl-8,{s:10.5,w:500,c:C.ink});
+  }else{ctx.lineTo(wx,ty+th+10);ctx.stroke();ctx.lineWidth=1;const Rr=rng(5);for(let i=0;i<14;i++){const bx=wx+(Rr()*2-1)*24,by=ty+4+Rr()*(th-8);const ph=((tt*0.15+Rr())%1);ctx.fillStyle=C.accent;ctx.beginPath();ctx.arc(lerp(bx,wx,ph),by,1.6,0,TAU);ctx.fill();}T(ctx,'vertical well: tiny contact area',wx+12,ty-8,{s:10.5,w:500,c:C.ink});}
+  ctx.lineWidth=1;T(ctx,'Well schematic (not to scale)',A.x,A.y+12,{f:'sans',s:12,w:500,c:C.ink});
+  const ymax=Math.max(700,Math.ceil(s.qi*1.1/100)*100);const yt=[];const ys=ymax>2000?500:ymax>1000?250:100;for(let v=0;v<=ymax;v+=ys)yt.push(v);
+  T(ctx,'Production rate · first 10 years',B.x,B.y+12,{f:'sans',s:12,w:500,c:C.ink});
+  const ax=axes(ctx,B,{x0:0,x1:10,y0:ymax,y1:0,xt:[0,2,4,6,8,10],yt,yf:v=>n0(v),xl:'Years on production',yl:'Oil rate (bbl/d)',pad:{l:50,r:8,t:24,b:34}});
+  ctx.fillStyle=alpha(C.accent,.16);ctx.beginPath();ctx.moveTo(ax.X(0),ax.Y(0));for(let x=0;x<=10;x+=0.05)ctx.lineTo(ax.X(x),ax.Y(Math.min(s.q(x),ymax)));ctx.lineTo(ax.X(10),ax.Y(0));ctx.fill();
+  const curve=(fn,col,w,dash)=>{ctx.strokeStyle=col;ctx.lineWidth=w;ctx.setLineDash(dash||[]);ctx.beginPath();for(let x=0;x<=10;x+=0.05){const v=Math.min(fn(x),ymax);x===0?ctx.moveTo(ax.X(x),ax.Y(v)):ctx.lineTo(ax.X(x),ax.Y(v));}ctx.stroke();ctx.setLineDash([]);ctx.lineWidth=1;};
+  curve(s.qc,C.water,2,[6,4]);curve(s.q,C.accent,2.5);
+  const lx=ax.px+ax.pw-150,ly=ax.py+14;ctx.fillStyle=C.accent;ctx.fillRect(lx,ly-4,16,3);T(ctx,S.comp==='hz'?'Shale well (Arps)':'Vertical shale well',lx+22,ly,{s:10,c:C.ink});
+  ctx.fillStyle=C.water;ctx.fillRect(lx,ly+12,16,3);T(ctx,'Conventional well',lx+22,ly+16,{s:10,c:C.ink});
+  T(ctx,`EUR ${n0(s.eur/1000)} kbbl · ${n0(s.f2*100)}% in 2 yrs`,ax.px+ax.pw-6,ax.py+ax.ph-8,{a:'right',s:10.5,w:500,c:C.accent});
+ },
+ intro:'How can a rock that barely lets fluid through become one of the world\u2019s biggest oil sources? Nonconventional resources form the large, lower-grade base of the resource triangle: shale oil and gas, tight sands, coalbed methane, oil sands and gas hydrates. There is a lot of it, but each barrel takes more technology and cost to produce. In shale, the same rock is both source and reservoir, with permeability measured in nanodarcies, roughly a million times lower than a good sandstone. A vertical well barely flows. The breakthrough was combining long horizontal laterals with many stages of hydraulic fracturing, which cracks the rock and props the cracks open, creating an enormous contact area. These wells start strong but decline steeply, often losing more than half their rate in the first year, so operators must keep drilling just to hold production flat. Decline is described with the Arps equation, where the b-factor controls how quickly the decline flattens. Compare a fractured shale well with a conventional well and test how stages, lateral length and rock quality change the outcome.',
+ describe(S){const s=shale(S);let r=S.comp==='hz'?`This horizontal well has a ${n0(S.lat)} meter lateral with ${S.stages} frac stages, spaced about ${n0(s.spacing)} meters apart, in shale of about ${n0(s.k)} nanodarcies.`:`This vertical well is unstimulated, in shale of about ${n0(s.k)} nanodarcies.`;
+  r+=` It starts at ${n0(s.qi)} barrels per day and falls to ${n0(s.q(1))} after one year. Over thirty years it recovers about ${n0(s.eur/1000)} thousand barrels, with ${n0(s.f2*100)} percent of that in the first two years. ${s.ceur/s.eur>100?'That is far too little to be economic on its own.':`Matching one conventional well would take about ${(s.ceur/s.eur).toFixed(1)} of these wells.`}`;
+  if(S.comp==='hz'&&s.spacing<50)r+=' The stages are so close that fractures start to interfere, so extra stages add less each time.';return r;},
+ tries:['Switch to a vertical, unstimulated well. How many of them would it take to match one fractured horizontal well?','On a 1,500 m lateral, raise stages from 20 to 70. When do extra stages stop paying off?','Drop the b-factor from 1.0 to 0.4. How does the 30-year EUR change even though the first-year decline is unchanged?'],
+ quiz:{q:'Why do shale wells almost always need hydraulic fracturing?',o:['Matrix permeability is in the nanodarcy range, far too low for economic flow','Shale oil is too viscous to flow','Shale lacks any porosity at all','Fracturing raises the oil’s API gravity'],a:0,why:'Shales have some porosity but nanodarcy permeability. Fracturing creates a large, conductive surface area so oil and gas only need to travel short distances through the matrix.'}
+};
+
+const MODS=[M_OIL,M_SEIS,M_PT,M_GEN,M_RES,M_TRAP,M_SYS,M_UNC];
+MODS.forEach(m=>{m.S={};m.controls.forEach(c=>m.S[c.id]=c.val);});
+
+/* ========== UI ========== */
+const nav=document.getElementById('nav'),cv=document.getElementById('cv'),ctx=cv.getContext('2d'),cwrap=document.getElementById('cwrap');
+let cur=0,W=600,H=400,playing=false,lastFrame=0;
+MODS.forEach((m,i)=>{const b=document.createElement('button');b.className='trk';b.type='button';b.innerHTML=`<span class="dep">${m.num}</span><span class="sw" style="background:${m.sw}"></span><span class="nm">${m.short}<small>${m.title}</small></span>`;b.addEventListener('click',()=>select(i));nav.appendChild(b);});
+function fit(){const m=MODS[cur];const w=cwrap.clientWidth-24;const narrow=w<560;const asp=narrow?m.aspect[1]:m.aspect[0];W=w;H=Math.round(clamp(w*asp,narrow?380:340,narrow?680:560));const dpr=window.devicePixelRatio||1;cv.style.height=H+'px';cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);}
+function select(i){stopSpeech();playing=false;cur=i;const m=MODS[i];
+ [...nav.children].forEach((b,j)=>b.setAttribute('aria-current',j===i?'true':'false'));
+ document.getElementById('eyebrow').textContent=`Topic ${m.num} · ${m.topic}`;document.getElementById('title').textContent=m.title;document.getElementById('goal').textContent=m.goal;cv.setAttribute('aria-label',m.title+' simulation');
+ const box=document.getElementById('controls');box.innerHTML='<h2>Controls</h2>';
+ m.controls.forEach(c=>{const d=document.createElement('div');d.className='ctl';const id=`c-${m.id}-${c.id}`;
+  if(c.type==='select'){d.innerHTML=`<label class="row" for="${id}">${c.label}</label><select id="${id}">${c.options.map(([v,n])=>`<option value="${v}"${v===m.S[c.id]?' selected':''}>${n}</option>`).join('')}</select>`;
+   d.querySelector('select').addEventListener('change',e=>{m.S[c.id]=e.target.value;changed();});}
+  else{d.innerHTML=`<div class="row"><label for="${id}">${c.label}</label><output id="${id}-o">${c.f(m.S[c.id])}</output></div><input type="range" id="${id}" min="${c.min}" max="${c.max}" step="${c.step}" value="${m.S[c.id]}">`;
+   d.querySelector('input').addEventListener('input',e=>{m.S[c.id]=parseFloat(e.target.value);d.querySelector('output').textContent=c.f(m.S[c.id]);if(m.play===c.id)playing=false;changed();});}
+  box.appendChild(d);
+  if(m.play===c.id){const pb=document.createElement('button');pb.className='btn primary';pb.type='button';pb.id='playBtn';pb.textContent='▶ Play burial history';pb.addEventListener('click',()=>{if(playing){playing=false;}else{if(m.S.time>=c.max-0.3){m.S.time=0;}playing=true;}syncPlay();});box.appendChild(pb);}
+ });
+ document.getElementById('tries').innerHTML=m.tries.map(s=>`<li>${s}</li>`).join('');
+ const qz=document.getElementById('quiz');qz.innerHTML=`<h2>Quick check</h2><p>${m.quiz.q}</p><div class="opts">${m.quiz.o.map((o,j)=>`<button type="button" class="opt" data-j="${j}">${o}</button>`).join('')}</div><p class="why" id="why" hidden></p>`;
+ qz.querySelectorAll('.opt').forEach(b=>b.addEventListener('click',()=>{const j=+b.dataset.j;qz.querySelectorAll('.opt').forEach(x=>x.classList.remove('right','wrong'));b.classList.add(j===m.quiz.a?'right':'wrong');qz.querySelector(`[data-j="${m.quiz.a}"]`).classList.add('right');const w=document.getElementById('why');w.hidden=false;w.textContent=(j===m.quiz.a?'Correct. ':'Not quite. ')+m.quiz.why;}));
+ try{localStorage.setItem('pgsl-mod',String(i));}catch(e){}
+ try{history.replaceState(null,'','#'+m.id);}catch(e){}
+ fit();updateReads();setCaption('Press Play lesson to hear the narrated introduction to this simulation.');
+}
+function syncPlay(){const b=document.getElementById('playBtn');if(b)b.textContent=playing?'❚❚ Pause':'▶ Play burial history';}
+function updateReads(){const m=MODS[cur];document.getElementById('reads').innerHTML=m.readouts(m.S).map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('');}
+let autoTimer=null;
+function changed(){updateReads();if(document.getElementById('vAuto').checked){clearTimeout(autoTimer);autoTimer=setTimeout(()=>speak(MODS[cur].describe(MODS[cur].S),'NOW'),1100);}}
+let lastRead=0;
+function frame(ts){const t=ts/1000;const dt=lastFrame?Math.min(0.1,t-lastFrame):0;lastFrame=t;
+ const m=MODS[cur];
+ if(playing&&m.play){const c=m.controls.find(c=>c.id===m.play);m.S.time=Math.min(c.max,m.S.time+dt*c.max/16);const inp=document.getElementById(`c-${m.id}-${c.id}`);if(inp){inp.value=m.S.time;document.getElementById(`c-${m.id}-${c.id}-o`).textContent=c.f(m.S.time);}
+  if(ts-lastRead>150){updateReads();lastRead=ts;}if(m.S.time>=c.max){playing=false;syncPlay();updateReads();}}
+ readTheme();ctx.clearRect(0,0,W,H);try{m.draw(ctx,W,H,m.S,t);}catch(e){console.error(e);}
+ requestAnimationFrame(frame);}
+
+/* ========== VOICE ========== */
+const synth=('speechSynthesis' in window)?window.speechSynthesis:null;let gen=0,vq=[],vi=0,vTimer=null,voice=null,vLabel='',voices=[];
+const NATURAL=/natural|neural|online|premium|enhanced|siri|google/i;
+function scoreVoice(v){if(!/^en/i.test(v.lang))return -999;let s=0;const n=v.name;
+ if(/natural|neural/i.test(n))s+=100;if(/online/i.test(n))s+=30;if(/premium|enhanced|siri/i.test(n))s+=80;if(/google/i.test(n))s+=55;
+ if(/aria|jenny|guy|ava|andrew|emma|brian|sonia|ryan|libby|natasha|william|samantha|daniel|karen|moira|serena|evan|zoe|allison/i.test(n))s+=20;
+ if(/espeak|zira|hazel|fred|albert|bad news|bells|boing|bubbles|cellos|jester|organ|superstar|trinoids|whisper|wobble|zarvox|junior|ralph|kathy|bahh|grandma|grandpa|rocko|shelley|flo|eddy|reed|sandy/i.test(n))s-=70;
+ if(/en[-_]US/i.test(v.lang))s+=6;if(/en[-_]GB/i.test(v.lang))s+=4;return s;}
+const vSel=document.getElementById('vVoice');
+/* Only the voice named Karen is used. If a device does not have Karen, fall back quietly to its best English voice. */
+function loadVoices(){if(!synth)return;const all=synth.getVoices();if(!all.length)return;
+ const karen=all.find(v=>/karen/i.test(v.name));
+ if(karen){voice=karen;vSel.textContent='Karen';}
+ else{voice=all.filter(v=>/^en/i.test(v.lang)).sort((a,b)=>scoreVoice(b)-scoreVoice(a))[0]||null;vSel.textContent=voice?`Karen not on this device, using ${voice.name.replace(/^Microsoft /,'').replace(/ - English.*$/,'')}`:'Default voice';}}
+if(synth){loadVoices();synth.onvoiceschanged=loadVoices;setTimeout(loadVoices,400);}else{vSel.textContent='Captions only';}
+const cap=document.getElementById('cap');
+function setCaption(s,label){cap.innerHTML=`<b>${label||'CAPTION'}</b>`;cap.appendChild(document.createTextNode(s));}
+function stopSpeech(){gen++;clearTimeout(vTimer);if(synth)synth.cancel();}
+/* Intonation engine: browsers only let us set pitch and rate per utterance, so each sentence is broken
+   into clauses and given a contour: lift at the start, gentle fall at the end, a rise for questions,
+   brighter and quicker for exclamations, slower and higher on key terms and numbers, real pauses between sentences. */
+const KEY=/\b(API gravity|bright spot|acoustic impedance|impedance|reflection coefficient|overpressure|oil window|gas window|kerogen|vitrinite reflectance|porosity|permeability|capillary|spill point|seal capacity|critical moment|petroleum system|hydraulic fractur\w*|nanodarc\w*|tuning|sour|sweet|bright|steeply|everything|million|thousand|never|only)\b|\d/i;
+function plan(text){const mode=document.getElementById('vExpr').value;const nat=voice&&NATURAL.test(voice.name);
+ const expressive=mode==='expressive'||(mode==='auto'&&!nat);const amt=mode==='plain'?0:(nat&&mode==='auto'?0.5:1);
+ const sents=(text.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[text]).map(x=>x.trim()).filter(Boolean);const out=[];
+ sents.forEach((s,si)=>{const kind=/\?$/.test(s)?'q':/!$/.test(s)?'ex':'st';
+  let parts=expressive?(s.match(/[^,;:]+[,;:]?/g)||[s]).map(x=>x.trim()).filter(Boolean):[s];
+  const merged=[];parts.forEach(c=>{if(merged.length&&(merged[merged.length-1].length<22||c.length<12))merged[merged.length-1]+=' '+c;else merged.push(c);});parts=merged;
+  const L=parts.length;parts.forEach((c,ci)=>{let p=0,r=0;
+   if(L>1){if(ci===0)p=0.08;else if(ci===L-1)p=kind==='q'?0.18:-0.07;else p=(ci%2?-0.03:0.04);}
+   else p=kind==='q'?0.14:((si%3)-1)*0.05;
+   if(kind==='ex'){p+=0.1;r+=0.06;}
+   if(KEY.test(c)){p+=0.05;r-=0.08;}
+   if(si===0)p+=0.05;
+   if(/^(but|so|because|once|finally|here|now|watch|press|move|then)\b/i.test(c)){r-=0.04;}
+   out.push({t:c,si,first:ci===0,sent:s,pitch:clamp(1+p*amt,0.7,1.4),rate:clamp(1+r*amt,0.8,1.2),gap:ci===L-1?(kind==='q'?520:kind==='ex'?380:300):(expressive?70:0)});});});
+ return{chunks:out,count:sents.length};}
+function speak(text,label){stopSpeech();const my=gen;vLabel=label||'LESSON';const pl=plan(text);vq=pl.chunks;vq.total=pl.count;vi=0;next(my);}
+function next(my){if(my!==gen)return;if(vi>=vq.length){setCaption('Finished. Move a control, then press Describe what I see to hear the new state.','DONE');return;}
+ const ch=vq[vi++];if(ch.first)setCaption(ch.sent,`${vLabel} ${ch.si+1}/${vq.total}`);const base=parseFloat(document.getElementById('vRate').value);
+ const go=()=>{vTimer=setTimeout(()=>next(my),ch.gap);};
+ if(synth){const u=new SpeechSynthesisUtterance(ch.t);u.rate=base*ch.rate;u.pitch=ch.pitch;u.lang=voice?voice.lang:'en-US';if(voice)u.voice=voice;u.onend=go;
+  u.onerror=()=>{if(my===gen)vTimer=setTimeout(()=>next(my),Math.max(900,ch.t.length*60/base));};synth.speak(u);}
+ else vTimer=setTimeout(()=>next(my),Math.max(1200,ch.t.length*62/base)+ch.gap);}
+document.getElementById('vPlay').addEventListener('click',()=>{const m=MODS[cur];speak(m.intro+' '+m.describe(m.S),'LESSON');});
+document.getElementById('vDesc').addEventListener('click',()=>{const m=MODS[cur];speak(m.describe(m.S),'NOW');});
+document.getElementById('vStop').addEventListener('click',()=>{stopSpeech();setCaption('Stopped.','CAPTION');});
+
+new ResizeObserver(()=>fit()).observe(cwrap);
+let start=0;const h=(location.hash||'').slice(1);const hi=MODS.findIndex(m=>m.id===h);
+if(hi>=0)start=hi;else{try{const s=parseInt(localStorage.getItem('pgsl-mod'),10);if(s>=0&&s<MODS.length)start=s;}catch(e){}}
+readTheme();select(start);requestAnimationFrame(frame);
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{});
+</script>
+</body>
+</html>
